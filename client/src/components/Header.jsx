@@ -1,25 +1,10 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState } from "react";
+import ThemeDropdown from "./ThemeDropdown";
 
 function Header() {
-  const [theme, setTheme] = useState(
-    localStorage.getItem("theme") || "light"
-  );
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("theme", theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((current) =>
-      current === "light" ? "dark" : "light"
-    );
-  };
-
   return (
     <header className="navbar bg-base-100 border-b border-base-300 px-4 md:px-8">
-      
+
       {/* Logo */}
       <div className="navbar-start">
         <Link
@@ -30,31 +15,24 @@ function Header() {
         </Link>
       </div>
 
-      {/* Desktop Navigation */}
+      {/* Navigation */}
       <div className="navbar-center hidden md:flex">
-        <ul className="menu menu-horizontal gap-2">
+        <ul className="menu menu-horizontal">
           <li>
-            <Link to="/">Home</Link>
+            <Link to="/" className="font-medium">Home</Link>
           </li>
+
           <li>
-            <Link to="/chat">Chat</Link>
+            <Link to="/chat" className="font-medium">Chat</Link>
           </li>
         </ul>
       </div>
 
-      {/* Right Section */}
+      {/* Right */}
       <div className="navbar-end gap-2">
 
-        {/* Theme */}
-        <button
-          onClick={toggleTheme}
-          className="btn btn-circle btn-ghost"
-          title="Change theme"
-        >
-          {theme === "light" ? "🌙" : "☀️"}
-        </button>
+        <ThemeDropdown />
 
-        {/* Login */}
         <Link
           to="/login"
           className="btn btn-primary"
@@ -62,13 +40,13 @@ function Header() {
           Login
         </Link>
 
-        {/* Register */}
         <Link
           to="/register"
           className="btn btn-outline btn-primary hidden sm:flex"
         >
           Register
         </Link>
+
       </div>
     </header>
   );

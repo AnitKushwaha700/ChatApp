@@ -1,2 +1,7 @@
 @import "tailwindcss";
-@plugin "flyonui";
+
+@plugin "flyonui" {
+  themes: all;
+}
+
+@import "../node_modules/flyonui/variants.css";
