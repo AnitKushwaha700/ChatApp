@@ -1,7 +1,10 @@
+import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 function Header() {
-  const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
+  const [theme, setTheme] = useState(
+    localStorage.getItem("theme") || "light"
+  );
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -9,44 +12,63 @@ function Header() {
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme((currentTheme) => (currentTheme === "light" ? "dark" : "light"));
+    setTheme((current) =>
+      current === "light" ? "dark" : "light"
+    );
   };
 
   return (
-    <header className="navbar bg-base-100 border-b border-base-300 px-6">
+    <header className="navbar bg-base-100 border-b border-base-300 px-4 md:px-8">
+      
       {/* Logo */}
       <div className="navbar-start">
-        <a className="text-2xl font-bold text-primary">ChatApp</a>
+        <Link
+          to="/"
+          className="text-2xl font-bold text-primary"
+        >
+          ChatApp
+        </Link>
       </div>
 
-      {/* Navigation */}
+      {/* Desktop Navigation */}
       <div className="navbar-center hidden md:flex">
         <ul className="menu menu-horizontal gap-2">
           <li>
-            <a>Home</a>
+            <Link to="/">Home</Link>
           </li>
           <li>
-            <a>Chats</a>
-          </li>
-          <li>
-            <a>About</a>
+            <Link to="/chat">Chat</Link>
           </li>
         </ul>
       </div>
 
-      {/* Right side */}
-      <div className="navbar-end gap-3">
-        {/* Theme button */}
+      {/* Right Section */}
+      <div className="navbar-end gap-2">
+
+        {/* Theme */}
         <button
           onClick={toggleTheme}
-          className="btn btn-outline btn-primary"
-          aria-label="Toggle theme"
+          className="btn btn-circle btn-ghost"
+          title="Change theme"
         >
-          theme
+          {theme === "light" ? "🌙" : "☀️"}
         </button>
 
         {/* Login */}
-        <button className="btn btn-primary hidden sm:inline-flex">Login</button>
+        <Link
+          to="/login"
+          className="btn btn-primary"
+        >
+          Login
+        </Link>
+
+        {/* Register */}
+        <Link
+          to="/register"
+          className="btn btn-outline btn-primary hidden sm:flex"
+        >
+          Register
+        </Link>
       </div>
     </header>
   );

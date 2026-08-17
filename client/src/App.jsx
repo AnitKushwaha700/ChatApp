@@ -1,17 +1,17 @@
-import React from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Header from "./components/Header";
 
-const App = () => {
+function App() {
   return (
-    <>
-      <>
-        <Header />
-        <main className="min-h-screen bg-base-100 text-base-content flex items-center justify-center">
-          <h1 className="text-4xl font-bold">Welcome to ChatApp</h1>
-        </main>
-      </>
-    </>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Routes>
+    </BrowserRouter>
   );
-};
+}
 
 export default App;
