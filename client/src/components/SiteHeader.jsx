@@ -13,7 +13,7 @@ const SiteHeader = () => {
     <>
       <div className="bg-primary p-2 flex items-center justify-between">
         <h1 className="text-3xl font-bold text-primary-content text-center">
-          Mingo Chat App
+          Chat App
         </h1>
 
         <select
