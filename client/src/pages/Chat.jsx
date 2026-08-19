@@ -4,7 +4,7 @@ import ProfileModal from "../components/ProfileModal";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import api from "../config/api";
-import { LogOut, Settings, Search } from "lucide-react";
+import { LogOut, Settings, Search, Edit3, Palette } from "lucide-react";
 
 const Chat = () => {
   const navigate = useNavigate();
@@ -14,6 +14,8 @@ const Chat = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const settingsRef = React.useRef(null);
 
   const fetchRecentUsers = async () => {
     try {
@@ -39,6 +41,17 @@ const Chat = () => {
     navigate("/");
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target)) {
+        setIsSettingsOpen(false);
+        setIsThemeDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   if (!isLogin) return null;
 
   const filteredUsers = recentUser.filter(u =>
@@ -52,7 +65,7 @@ const Chat = () => {
         
         {/* Search Bar (Top) */}
         <div className="p-4 border-b border-base-content/10">
-          <div className="relative flex items-center bg-base-300 rounded-lg p-2 border border-base-content/10 focus-within:border-primary transition-colors">
+          <div className="relative flex items-center bg-base-content/5 rounded-lg p-2 border border-base-content/10 focus-within:border-primary transition-colors">
             <Search className="w-4 h-4 text-base-content/50 absolute left-3" />
             <input
               type="text"
@@ -67,7 +80,7 @@ const Chat = () => {
         {/* Tabs */}
         <div className="flex p-4 gap-2 border-b border-base-content/10">
           <button className="flex-1 bg-primary text-primary-content py-1.5 rounded-md text-sm font-medium shadow-sm">Chats</button>
-          <button className="flex-1 text-base-content/70 hover:bg-base-300 py-1.5 rounded-md text-sm font-medium transition-colors">Contacts</button>
+          <button className="flex-1 text-base-content/70 hover:bg-base-content/10 py-1.5 rounded-md text-sm font-medium transition-colors">Contacts</button>
         </div>
 
         {/* User List */}
@@ -77,7 +90,7 @@ const Chat = () => {
               key={u._id}
               onClick={() => setSelectedFriend(u)}
               className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                selectedFriend?._id === u._id ? "bg-base-300 shadow-sm" : "hover:bg-base-300/50"
+                selectedFriend?._id === u._id ? "bg-base-content/10 shadow-sm" : "hover:bg-base-content/5"
               }`}
             >
               <div className="relative shrink-0">
@@ -117,39 +130,67 @@ const Chat = () => {
             </div>
           </div>
           <div className="flex gap-3 text-base-content/70 items-center">
-            <div className="dropdown dropdown-top dropdown-end relative z-50">
-              <label tabIndex={0} className="cursor-pointer hover:text-base-content transition-colors flex items-center h-full">
+            <div className="relative z-50" ref={settingsRef}>
+              <button 
+                onClick={() => setIsSettingsOpen(!isSettingsOpen)} 
+                className="cursor-pointer hover:text-base-content transition-colors flex items-center h-full bg-transparent border-none p-0 outline-none"
+              >
                 <Settings size={18} />
-              </label>
-              <ul tabIndex={0} className="dropdown-content z-[100] menu p-2 shadow-xl bg-base-100 rounded-box w-52 border border-base-content/10 mb-2">
-                <li>
-                  <a onClick={() => setIsProfileModalOpen(true)}>Edit Profile</a>
-                </li>
-                <li>
-                  <a onClick={() => setIsThemeDropdownOpen(!isThemeDropdownOpen)}>
-                    Theme {isThemeDropdownOpen ? '▼' : '▶'}
-                  </a>
+              </button>
+              
+              {isSettingsOpen && (
+                <div className="absolute bottom-10 right-0 p-3 shadow-xl bg-base-100 rounded-box w-64 border border-base-content/10 mb-2 flex flex-col gap-3">
+                  {/* Grid for Icons */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        setIsProfileModalOpen(true);
+                        setIsSettingsOpen(false);
+                      }}
+                      className="flex flex-col items-center justify-center gap-1 p-3 rounded-xl bg-base-200 hover:bg-primary hover:text-primary-content transition-all border-none outline-none cursor-pointer"
+                    >
+                      <Edit3 size={20} />
+                      <span className="text-[10px] font-medium uppercase tracking-wider">Edit</span>
+                    </button>
+                    <button
+                      onClick={() => setIsThemeDropdownOpen(!isThemeDropdownOpen)}
+                      className={`flex flex-col items-center justify-center gap-1 p-3 rounded-xl transition-all border-none outline-none cursor-pointer ${isThemeDropdownOpen ? 'bg-primary text-primary-content' : 'bg-base-200 hover:bg-base-content/10'}`}
+                    >
+                      <Palette size={20} />
+                      <span className="text-[10px] font-medium uppercase tracking-wider">Themes</span>
+                    </button>
+                  </div>
+
+                  {/* Themes List (Underscrollbar) */}
                   {isThemeDropdownOpen && (
-                    <ul className="ml-2 mt-1 menu bg-base-200 rounded-box p-2 max-h-48 overflow-y-auto custom-scrollbar">
-                      {["light", "dark", "black", "spotify", "corporate", "ghibli"].map((theme) => (
-                        <li key={theme}>
-                          <a 
-                            onClick={() => {
-                              document.documentElement.setAttribute("data-theme", theme);
-                              localStorage.setItem("theme", theme);
-                              localStorage.setItem("mingoTheme", theme);
-                            }}
-                          >
-                            {theme.charAt(0).toUpperCase() + theme.slice(1)}
-                          </a>
-                        </li>
+                    <div className="flex flex-col gap-1 max-h-40 overflow-y-auto custom-scrollbar bg-base-200 p-2 rounded-xl">
+                      {["light", "dark", "black", "spotify", "corporate", "ghibli", "pastel", "retro"].map((theme) => (
+                        <button
+                          key={theme}
+                          onClick={() => {
+                            document.documentElement.setAttribute("data-theme", theme);
+                            localStorage.setItem("theme", theme);
+                            localStorage.setItem("mingoTheme", theme);
+                            setIsSettingsOpen(false);
+                            setIsThemeDropdownOpen(false);
+                          }}
+                          className={`text-left px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer border-none outline-none ${
+                            localStorage.getItem("theme") === theme
+                              ? "bg-primary/20 text-primary font-medium"
+                              : "hover:bg-base-content/10 text-base-content/80 hover:text-base-content"
+                          }`}
+                        >
+                          {theme.charAt(0).toUpperCase() + theme.slice(1)}
+                        </button>
                       ))}
-                    </ul>
+                    </div>
                   )}
-                </li>
-              </ul>
+                </div>
+              )}
             </div>
-            <LogOut size={18} className="cursor-pointer hover:text-error transition-colors" onClick={handleLogout} />
+            <button onClick={handleLogout} className="cursor-pointer hover:text-error transition-colors bg-transparent border-none p-0 outline-none">
+              <LogOut size={18} />
+            </button>
           </div>
         </div>
       </div>

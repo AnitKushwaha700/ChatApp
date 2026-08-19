@@ -10,6 +10,11 @@ import AuthModals from "./components/AuthModals";
 const App = () => {
   const path = useLocation().pathname;
 
+  React.useEffect(() => {
+    const savedTheme = localStorage.getItem("theme") || "light";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+  }, []);
+
   return (
     <>
       <Toaster />

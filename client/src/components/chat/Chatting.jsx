@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import api from "../../config/api";
 import { useAuth } from "../../context/AuthContext";
-import { X, Image as ImageIcon, Send, Plus, Mic, FileText, Camera, Music, UserPlus, StopCircle } from "lucide-react";
+import { X, Image as ImageIcon, Send, Plus, Mic, FileText, Camera, Music, UserPlus, StopCircle, Smile } from "lucide-react";
+import EmojiPicker from "emoji-picker-react";
 
 const Chatting = ({ selectedFriend, setSelectedFriend }) => {
   const { user } = useAuth();
@@ -10,6 +11,7 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -52,6 +54,7 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
       
       fetchChatData();
       setIsAttachmentOpen(false);
+      setShowEmojiPicker(false);
     } catch (error) {
       console.error("Failed to send message", error);
     }
@@ -124,10 +127,14 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
       if (attachmentRef.current && !attachmentRef.current.contains(event.target)) {
         setIsAttachmentOpen(false);
       }
+      // Simple way to close emoji picker when clicking outside without a dedicated ref
+      if (showEmojiPicker && !event.target.closest('.emoji-picker-react') && !event.target.closest('button')) {
+        setShowEmojiPicker(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [showEmojiPicker]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -183,7 +190,7 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
           return (
             <div key={chat._id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl ${
-                  isMe ? "bg-primary text-primary-content rounded-tr-sm shadow-md" : "bg-base-300 text-base-content rounded-tl-sm shadow-md"
+                  isMe ? "bg-primary text-primary-content rounded-tr-sm shadow-md" : "bg-base-200 text-base-content rounded-tl-sm shadow-md border border-base-content/5"
                 }`}
               >
                 {renderMessageContent(chat)}
@@ -206,7 +213,7 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
             <button 
               type="button" 
               onClick={() => setIsAttachmentOpen(!isAttachmentOpen)}
-              className="p-2.5 bg-base-300 rounded-full text-base-content/70 hover:text-base-content transition-colors"
+              className="p-2.5 bg-base-content/10 rounded-full text-base-content/70 hover:text-base-content transition-colors cursor-pointer border-none outline-none"
             >
               <Plus size={20} className={`transition-transform duration-300 ${isAttachmentOpen ? "rotate-45" : ""}`} />
             </button>
@@ -232,6 +239,24 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
             )}
             
             <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+          </div>
+
+          <div className="relative">
+            <button 
+              type="button" 
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              className="p-2 text-base-content/70 hover:text-base-content transition-colors"
+            >
+              <Smile size={20} />
+            </button>
+            {showEmojiPicker && (
+              <div className="absolute bottom-12 left-0 z-50 shadow-2xl">
+                <EmojiPicker 
+                  onEmojiClick={(emojiData) => setMessage((prev) => prev + emojiData.emoji)}
+                  theme={localStorage.getItem("theme") === "dark" || localStorage.getItem("theme") === "black" ? "dark" : "light"}
+                />
+              </div>
+            )}
           </div>
 
           {isRecording ? (
