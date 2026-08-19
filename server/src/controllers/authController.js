@@ -74,3 +74,33 @@ export const UserLogin = async (req, res, next) => {
     next(error);
   }
 };
+
+// ================= SWITCH ACCOUNT =================
+export const SwitchUser = async (req, res, next) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      const error = new Error("User ID required");
+      error.statusCode = 400;
+      return next(error);
+    }
+    const user = await User.findById(userId);
+    if (!user) {
+      const error = new Error("User not found");
+      error.statusCode = 404;
+      return next(error);
+    }
+
+    generateToken(user._id, res);
+
+    const userData = user.toObject();
+    delete userData.password;
+
+    res.status(200).json({
+      message: "Switched account successfully",
+      data: userData,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

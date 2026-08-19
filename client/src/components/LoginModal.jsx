@@ -62,7 +62,7 @@ const LoginModal = () => {
       <div className="p-8">
         <h2 className="text-3xl font-bold text-primary mb-2">Welcome Back</h2>
         <p className="text-base-content/70 mb-8">
-          Sign in to continue your conversations 👋
+          Sign in to continue your conversations
         </p>
 
         <form onSubmit={handleSubmit} onReset={handleClearForm} className="space-y-5">

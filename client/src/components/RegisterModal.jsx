@@ -108,7 +108,7 @@ const RegisterModal = () => {
       <div className="p-8">
         <h2 className="text-3xl font-bold text-primary mb-2">Create Account</h2>
         <p className="text-base-content/70 mb-8">
-          Join us and start chatting today 🚀
+          Join us and start chatting today
         </p>
 
         <form onSubmit={handleSubmit} onReset={handleClearForm} className="space-y-4">

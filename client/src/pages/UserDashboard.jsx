@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import api from "../config/api";
 import { useNavigate } from "react-router-dom";
+import { motion } from "motion/react";
+import { User, Mail, Phone, Calendar, Edit3, X, Save } from "lucide-react";
 
 const UserDashboard = () => {
   const { user, isLogin, setUser, setIsLogin } = useAuth();
@@ -29,9 +31,11 @@ const UserDashboard = () => {
 
   if (!isLogin) {
     return (
-      <div className="container mx-auto mt-10 px-4">
-        <h1 className="text-3xl font-bold mb-4 text-error">Unauthorized</h1>
-        <p className="text-lg">Please log in to access the dashboard.</p>
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-base-200">
+        <div className="text-center p-8">
+          <h1 className="text-4xl font-bold text-error mb-4">Unauthorized Access</h1>
+          <p className="text-lg text-base-content/70">Please log in to view your dashboard.</p>
+        </div>
       </div>
     );
   }
@@ -82,139 +86,208 @@ const UserDashboard = () => {
       }
     } catch (err) {
       console.error("Error updating profile:", err);
-      setError(err.response?.data?.message || "Failed to update profile. Please try again.");
+      setError(err.response?.data?.message || "Failed to update profile.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    sessionStorage.removeItem("AppUser");
-    setIsLogin(false);
-    navigate("/login");
-  };
+  const userInitial = user?.fullName ? user.fullName.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase();
 
   return (
-    <div className="container mx-auto mt-10 mb-10 max-w-2xl px-4">
-      <h1 className="text-4xl font-bold mb-8 text-center">User Dashboard</h1>
+    <div className="min-h-[calc(100vh-4rem)] bg-base-200 py-12 px-4 relative overflow-hidden">
+      {/* Background gradients */}
+      <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary/20 rounded-full blur-[100px]" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-secondary/20 rounded-full blur-[100px]" />
 
-      {error && (
-        <div className="alert alert-error mb-6">
-          <span>{error}</span>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="container mx-auto max-w-3xl relative z-10"
+      >
+        <div className="text-center mb-10">
+          <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary mb-3">
+            Your Dashboard
+          </h1>
+          <p className="text-base-content/60 text-lg">Manage your profile and account settings.</p>
         </div>
-      )}
 
-      {success && (
-        <div className="alert alert-success mb-6">
-          <span>{success}</span>
-        </div>
-      )}
+        {error && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="alert alert-error shadow-lg mb-6">
+            <span>{error}</span>
+          </motion.div>
+        )}
 
-      {!isEditing ? (
-        <div className="card bg-base-100 shadow-lg p-8">
-          <h2 className="text-2xl font-semibold mb-6">Profile Information</h2>
+        {success && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="alert alert-success shadow-lg mb-6 text-success-content">
+            <span>{success}</span>
+          </motion.div>
+        )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-            <div className="bg-base-200 p-4 rounded-lg">
-              <label className="text-sm font-semibold uppercase text-base-content/60">Full Name</label>
-              <p className="text-lg mt-2">{user?.fullName || "Not provided"}</p>
-            </div>
-
-            <div className="bg-base-200 p-4 rounded-lg">
-              <label className="text-sm font-semibold uppercase text-base-content/60">Email</label>
-              <p className="text-lg mt-2">{user?.email || "Not provided"}</p>
-            </div>
-
-            <div className="bg-base-200 p-4 rounded-lg">
-              <label className="text-sm font-semibold uppercase text-base-content/60">Mobile Number</label>
-              <p className="text-lg mt-2">{user?.mobileNumber || "Not provided"}</p>
-            </div>
-
-            {user?.createdAt && (
-              <div className="bg-base-200 p-4 rounded-lg">
-                <label className="text-sm font-semibold uppercase text-base-content/60">Account Created</label>
-                <p className="text-lg mt-2">
-                  {new Date(user.createdAt).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </p>
+        <div className="card bg-base-100/70 backdrop-blur-xl shadow-2xl border border-white/10 overflow-hidden">
+          {/* Cover photo area */}
+          <div className="h-32 bg-gradient-to-r from-primary/20 to-secondary/20 relative flex justify-center">
+            <div className="absolute -bottom-12">
+              <div className="w-24 h-24 rounded-full bg-primary text-primary-content flex items-center justify-center shadow-xl ring ring-base-100 ring-offset-2 ring-offset-base-100">
+                <span className="text-4xl font-bold leading-none">{userInitial}</span>
               </div>
+            </div>
+            
+            {!isEditing && (
+              <button 
+                onClick={handleEdit} 
+                className="absolute bottom-4 right-4 btn btn-sm btn-primary shadow-lg"
+              >
+                <Edit3 className="w-4 h-4 mr-1" /> Edit Profile
+              </button>
             )}
           </div>
 
-          <div className="flex flex-col gap-3">
-            <button onClick={handleEdit} className="btn btn-primary w-full">
-              Edit Profile
-            </button>
-            <button onClick={handleLogout} className="btn btn-error btn-outline w-full">
-              Logout
-            </button>
+          <div className="pt-16 pb-8 px-8">
+            {!isEditing ? (
+              <motion.div 
+                initial={{ opacity: 0 }} 
+                animate={{ opacity: 1 }} 
+                exit={{ opacity: 0 }}
+                className="space-y-6"
+              >
+                <div>
+                  <h2 className="text-2xl font-bold">{user?.fullName || "No Name Provided"}</h2>
+                  <p className="text-base-content/60 flex items-center gap-1 mt-1">
+                    {user?.email}
+                  </p>
+                </div>
+
+                <div className="divider my-2"></div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-base-200 rounded-lg text-primary">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-base-content/50 uppercase tracking-wider">Full Name</p>
+                      <p className="font-medium text-lg mt-0.5">{user?.fullName || "Not provided"}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-base-200 rounded-lg text-secondary">
+                      <Mail className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-base-content/50 uppercase tracking-wider">Email Address</p>
+                      <p className="font-medium text-lg mt-0.5">{user?.email || "Not provided"}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-base-200 rounded-lg text-accent">
+                      <Phone className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-base-content/50 uppercase tracking-wider">Mobile Number</p>
+                      <p className="font-medium text-lg mt-0.5">{user?.mobileNumber || "Not provided"}</p>
+                    </div>
+                  </div>
+
+                  {user?.createdAt && (
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 bg-base-200 rounded-lg text-info">
+                        <Calendar className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-base-content/50 uppercase tracking-wider">Joined On</p>
+                        <p className="font-medium text-lg mt-0.5">
+                          {new Date(user.createdAt).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            ) : (
+              <motion.form 
+                initial={{ opacity: 0, scale: 0.95 }} 
+                animate={{ opacity: 1, scale: 1 }} 
+                onSubmit={handleSubmit} 
+                className="space-y-6"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <label className="text-sm font-semibold text-base-content/80 flex items-center gap-2">
+                      <User className="w-4 h-4" /> Full Name
+                    </label>
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={formData.fullName}
+                      onChange={handleInputChange}
+                      className="input input-bordered w-full bg-base-200/50"
+                      placeholder="John Doe"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-sm font-semibold text-base-content/80 flex items-center gap-2">
+                      <Mail className="w-4 h-4" /> Email Address
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="input input-bordered w-full bg-base-200/50"
+                      placeholder="john@example.com"
+                    />
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="text-sm font-semibold text-base-content/80 flex items-center gap-2">
+                      <Phone className="w-4 h-4" /> Mobile Number
+                    </label>
+                    <input
+                      type="tel"
+                      name="mobileNumber"
+                      value={formData.mobileNumber}
+                      onChange={handleInputChange}
+                      className="input input-bordered w-full bg-base-200/50"
+                      placeholder="10-digit number"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-6 border-t border-base-200/50 mt-8">
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    disabled={loading}
+                    className="btn btn-ghost"
+                  >
+                    <X className="w-4 h-4" /> Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn btn-primary shadow-lg shadow-primary/30"
+                  >
+                    {loading ? (
+                      <span className="loading loading-spinner loading-sm"></span>
+                    ) : (
+                      <><Save className="w-4 h-4" /> Save Changes</>
+                    )}
+                  </button>
+                </div>
+              </motion.form>
+            )}
           </div>
         </div>
-      ) : (
-        <div className="card bg-base-100 shadow-lg p-8">
-          <h2 className="text-2xl font-semibold mb-6">Edit Profile</h2>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-semibold mb-2">Full Name</label>
-              <input
-                type="text"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleInputChange}
-                className="input input-bordered w-full"
-                placeholder="Enter your full name"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2">Email Address</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                className="input input-bordered w-full"
-                placeholder="Enter your email"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold mb-2">Mobile Number</label>
-              <input
-                type="tel"
-                name="mobileNumber"
-                value={formData.mobileNumber}
-                onChange={handleInputChange}
-                className="input input-bordered w-full"
-                placeholder="Enter your mobile number"
-              />
-            </div>
-
-            <div className="flex gap-4 pt-4">
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn btn-success flex-1"
-              >
-                {loading ? "Saving..." : "Save Changes"}
-              </button>
-              <button
-                type="button"
-                onClick={handleCancel}
-                disabled={loading}
-                className="btn btn-ghost flex-1"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      </motion.div>
     </div>
   );
 };
