@@ -3,13 +3,14 @@ import Chatting from "../components/chat/Chatting";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import api from "../config/api";
-import { LogOut, VolumeX } from "lucide-react";
+import { LogOut, Settings, Search } from "lucide-react";
 
 const Chat = () => {
   const navigate = useNavigate();
   const { user, isLogin, setUser, setIsLogin } = useAuth();
   const [recentUser, setRecentUser] = useState([]);
   const [selectedFriend, setSelectedFriend] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchRecentUsers = async () => {
     try {
@@ -37,70 +38,97 @@ const Chat = () => {
 
   if (!isLogin) return null;
 
+  const filteredUsers = recentUser.filter(u =>
+    (u.fullName || u.email).toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
-    <div className="flex h-[calc(100vh-65px)] bg-[#0f1218] overflow-hidden">
+    <div className="flex h-screen bg-base-100 overflow-hidden text-base-content">
       {/* Sidebar */}
-      <div className="w-80 bg-[#161a23] flex flex-col h-full border-r border-white/5 shrink-0">
-        {/* Current User Header */}
-        <div className="p-4 flex items-center justify-between border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white font-bold text-lg">
-                {user?.fullName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
-              </div>
-              <div className="absolute top-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#161a23]"></div>
-            </div>
-            <div>
-              <h3 className="text-white font-semibold text-sm">{user?.fullName || user?.email}</h3>
-              <p className="text-xs text-gray-400">Online</p>
-            </div>
-          </div>
-          <div className="flex gap-3 text-gray-400">
-            <LogOut size={18} className="cursor-pointer hover:text-white" onClick={handleLogout} />
-            <VolumeX size={18} className="cursor-pointer hover:text-white" />
+      <div className="w-80 bg-base-200 flex flex-col h-full border-r border-base-content/10 shrink-0">
+        
+        {/* Search Bar (Top) */}
+        <div className="p-4 border-b border-base-content/10">
+          <div className="relative flex items-center bg-base-300 rounded-lg p-2 border border-base-content/10 focus-within:border-primary transition-colors">
+            <Search className="w-4 h-4 text-base-content/50 absolute left-3" />
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 bg-transparent border-none outline-none pl-8 text-sm text-base-content placeholder-base-content/50 w-full"
+            />
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex p-4 gap-2 border-b border-white/5">
-          <button className="flex-1 bg-[#1d8a8a] text-white py-1.5 rounded-md text-sm font-medium">Chats</button>
-          <button className="flex-1 text-gray-400 hover:bg-[#232936] py-1.5 rounded-md text-sm font-medium">Contacts</button>
+        <div className="flex p-4 gap-2 border-b border-base-content/10">
+          <button className="flex-1 bg-primary text-primary-content py-1.5 rounded-md text-sm font-medium shadow-sm">Chats</button>
+          <button className="flex-1 text-base-content/70 hover:bg-base-300 py-1.5 rounded-md text-sm font-medium transition-colors">Contacts</button>
         </div>
 
         {/* User List */}
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {recentUser.map((u) => (
+          {filteredUsers.map((u) => (
             <div
               key={u._id}
               onClick={() => setSelectedFriend(u)}
               className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                selectedFriend?._id === u._id ? "bg-[#232936]" : "hover:bg-[#232936]/50"
+                selectedFriend?._id === u._id ? "bg-base-300 shadow-sm" : "hover:bg-base-300/50"
               }`}
             >
               <div className="relative shrink-0">
-                <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white font-bold">
+                <div className="w-10 h-10 rounded-full bg-neutral text-neutral-content flex items-center justify-center font-bold">
                   {u.fullName?.charAt(0).toUpperCase() || u.email?.charAt(0).toUpperCase()}
                 </div>
-                <div className="absolute top-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#161a23]"></div>
+                <div className="absolute top-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-base-200"></div>
               </div>
               <div className="flex-1 truncate">
-                <h4 className="text-white text-sm font-medium truncate">{u.fullName || u.email}</h4>
+                <h4 className="text-base-content text-sm font-medium truncate">{u.fullName || u.email}</h4>
               </div>
             </div>
           ))}
+          {filteredUsers.length === 0 && (
+            <div className="text-center text-sm text-base-content/50 mt-8">
+              No users found
+            </div>
+          )}
+        </div>
+
+        {/* Current User Header (Bottom) */}
+        <div className="p-4 flex items-center justify-between border-t border-base-content/10 bg-base-200/50">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-lg shadow-sm">
+                {user?.fullName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
+              </div>
+              <div className="absolute top-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-base-200"></div>
+            </div>
+            <div>
+              <h3 className="font-semibold text-sm truncate max-w-[100px]">{user?.fullName || user?.email}</h3>
+              <p className="text-xs text-base-content/70">Online</p>
+            </div>
+          </div>
+          <div className="flex gap-3 text-base-content/70">
+            <Settings size={18} className="cursor-pointer hover:text-base-content transition-colors" />
+            <LogOut size={18} className="cursor-pointer hover:text-error transition-colors" onClick={handleLogout} />
+          </div>
         </div>
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col h-full bg-[#0f1218]">
+      <div className="flex-1 flex flex-col h-full bg-base-100">
         {selectedFriend ? (
           <Chatting
             selectedFriend={selectedFriend}
             setSelectedFriend={setSelectedFriend}
           />
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-500">
-            Select a chat to start messaging
+          <div className="flex-1 flex flex-col items-center justify-center text-base-content/50 gap-4">
+            <div className="w-20 h-20 bg-base-200 rounded-full flex items-center justify-center">
+              <Search className="w-8 h-8 opacity-50" />
+            </div>
+            <p>Select a chat to start messaging</p>
           </div>
         )}
       </div>
