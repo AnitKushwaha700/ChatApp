@@ -28,7 +28,7 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-base-200 flex flex-col justify-center items-center px-4 py-12 overflow-hidden relative">
+    <div className="h-[calc(100vh-65px)] bg-base-200 flex flex-col justify-center items-center px-4 overflow-hidden relative">
       {/* Background decoration */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
         <motion.div
@@ -55,7 +55,10 @@ const Home = () => {
         initial="hidden"
         animate="visible"
       >
-        <motion.div variants={itemVariants} className="mb-6 flex justify-center">
+        <motion.div
+          variants={itemVariants}
+          className="mb-6 flex justify-center"
+        >
           <div className="p-4 bg-primary/10 rounded-full text-primary">
             <MessageSquare size={48} strokeWidth={1.5} />
           </div>
@@ -65,15 +68,20 @@ const Home = () => {
           variants={itemVariants}
           className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 text-base-content"
         >
-          Connect with <span className="text-primary bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">Anyone</span>,<br />Anywhere.
+          Connect with{" "}
+          <span className="text-primary bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
+            Anyone
+          </span>
+          ,<br />
+          Anywhere.
         </motion.h1>
 
         <motion.p
           variants={itemVariants}
           className="text-xl text-base-content/70 mb-10 max-w-2xl mx-auto"
         >
-          Experience lightning-fast, secure, and beautiful conversations.
-          Join our community and start chatting today.
+          Experience lightning-fast, secure, and beautiful conversations. Join
+          our community and start chatting today.
         </motion.p>
 
         <motion.div
@@ -88,15 +96,6 @@ const Home = () => {
           >
             Start Chatting Now
           </motion.button>
-          
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="btn btn-outline btn-lg w-full sm:w-auto bg-base-100/50 backdrop-blur-sm"
-            onClick={() => navigate("/chat")}
-          >
-            Go to Chat Room
-          </motion.button>
         </motion.div>
 
         {/* Features Grid */}
@@ -104,27 +103,44 @@ const Home = () => {
           variants={containerVariants}
           className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left"
         >
-          <motion.div variants={itemVariants} className="card bg-base-100/60 backdrop-blur-md shadow-xl border border-white/10">
+          <motion.div
+            variants={itemVariants}
+            className="card bg-base-100/60 backdrop-blur-md shadow-xl border border-white/10"
+          >
             <div className="card-body">
               <Zap className="text-primary mb-2" size={32} />
               <h3 className="card-title">Lightning Fast</h3>
-              <p className="text-base-content/70">Real-time messaging with zero latency. Feel the speed in every keystroke.</p>
+              <p className="text-base-content/70">
+                Real-time messaging with zero latency. Feel the speed in every
+                keystroke.
+              </p>
             </div>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="card bg-base-100/60 backdrop-blur-md shadow-xl border border-white/10">
+          <motion.div
+            variants={itemVariants}
+            className="card bg-base-100/60 backdrop-blur-md shadow-xl border border-white/10"
+          >
             <div className="card-body">
               <Shield className="text-secondary mb-2" size={32} />
               <h3 className="card-title">Secure</h3>
-              <p className="text-base-content/70">Your conversations are protected with industry-standard encryption.</p>
+              <p className="text-base-content/70">
+                Your conversations are protected with industry-standard
+                encryption.
+              </p>
             </div>
           </motion.div>
 
-          <motion.div variants={itemVariants} className="card bg-base-100/60 backdrop-blur-md shadow-xl border border-white/10">
+          <motion.div
+            variants={itemVariants}
+            className="card bg-base-100/60 backdrop-blur-md shadow-xl border border-white/10"
+          >
             <div className="card-body">
               <Users className="text-accent mb-2" size={32} />
               <h3 className="card-title">Community</h3>
-              <p className="text-base-content/70">Connect with thousands of users in our growing ecosystem.</p>
+              <p className="text-base-content/70">
+                Connect with thousands of users in our growing ecosystem.
+              </p>
             </div>
           </motion.div>
         </motion.div>

@@ -5,10 +5,12 @@ import { useAuth } from "../context/AuthContext";
 import { useModal } from "../context/ModalContext";
 import { motion } from "motion/react";
 import { X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const LoginModal = () => {
   const { setUser, setIsLogin } = useAuth();
   const { closeLogin, openRegister } = useModal();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
@@ -33,6 +35,7 @@ const LoginModal = () => {
       setIsLogin(true);
       handleClearForm();
       closeLogin();
+      navigate("/chat");
     } catch (error) {
       console.log(error);
       toast.error(error?.response?.data?.message || "Login failed");
@@ -130,3 +133,4 @@ const LoginModal = () => {
 };
 
 export default LoginModal;
+

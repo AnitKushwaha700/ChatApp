@@ -1,16 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { chatData, userData } from "../../assets/dummy";
-import { useAuth } from "../../context/AuthContext";
+import React, { useEffect, useState, useRef } from "react";
 import api from "../../config/api";
+import { useAuth } from "../../context/AuthContext";
+import { X, Image, Send } from "lucide-react";
 
-const Chatting = ({ selectedFriend, currentUser }) => {
+const Chatting = ({ selectedFriend, setSelectedFriend }) => {
   const { user } = useAuth();
   const [filteredChatData, setFilteredChatData] = useState([]);
-  const [receiver, setReceiver] = useState("");
-  const [sender, setSender] = useState("");
   const [message, setMessage] = useState("");
-  //console.log(selectedFriend);
-  //console.log(currentUser);
+  const messagesEndRef = useRef(null);
 
   const fetchChatData = async () => {
     try {
@@ -21,16 +18,15 @@ const Chatting = ({ selectedFriend, currentUser }) => {
     }
   };
 
-  const handleMessageSend = async () => {
-    if (!message) return;
-    console.log(message);
+  const handleMessageSend = async (e) => {
+    e?.preventDefault();
+    if (!message.trim()) return;
 
     try {
-      const res = await api.post("/user/send-message", {
-        receiverID: receiver?._id,
+      await api.post("/user/send-message", {
+        receiverID: selectedFriend._id,
         message,
       });
-      console.log(res.data.message);
       setMessage("");
       fetchChatData();
     } catch (error) {
@@ -40,8 +36,6 @@ const Chatting = ({ selectedFriend, currentUser }) => {
 
   useEffect(() => {
     fetchChatData();
-    setSender(user);
-    setReceiver(selectedFriend);
 
     const interval = setInterval(() => {
       fetchChatData();
@@ -52,57 +46,88 @@ const Chatting = ({ selectedFriend, currentUser }) => {
     };
   }, [selectedFriend]);
 
-  //   console.log(filteredChatData);
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
-  // console.log(`Receiver: `, receiver);
-  // console.log(`Sender: `, sender);
+  useEffect(() => {
+    scrollToBottom();
+  }, [filteredChatData]);
 
   return (
-    <>
-      <div className="bg-base-200 p-4">
-        <div>{receiver?.fullName || "no friend Selected"}</div>
+    <div className="flex flex-col h-full w-full">
+      {/* Header */}
+      <div className="p-4 flex items-center justify-between border-b border-white/5 bg-[#161a23]">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className="w-10 h-10 rounded-full bg-gray-600 flex items-center justify-center text-white font-bold text-lg">
+              {selectedFriend?.fullName?.charAt(0).toUpperCase() || selectedFriend?.email?.charAt(0).toUpperCase()}
+            </div>
+            <div className="absolute top-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#161a23]"></div>
+          </div>
+          <div>
+            <h3 className="text-white font-semibold text-sm">{selectedFriend?.fullName || selectedFriend?.email}</h3>
+            <p className="text-xs text-gray-400">Online</p>
+          </div>
+        </div>
+        <button
+          onClick={() => setSelectedFriend(null)}
+          className="text-gray-400 hover:text-white transition-colors"
+        >
+          <X size={20} />
+        </button>
       </div>
 
-      <div className="p-3 flex flex-col gap-3">
-        <div className="h-[70vh] w-full card p-3 overflow-y-auto bg-accent/20">
-          {filteredChatData.map((chat, idx) => (
-            <div
-              className={`chat ${chat.senderId !== sender._id ? "chat-receiver" : "chat-sender"}`}
-            >
-              <div className="chat-avatar avatar">
-                {/* <div className="size-10 rounded-full">
-                  <img
-                    src={
-                      chat.senderId !== sender._id
-                        ? receiver.photo
-                        : sender.photo
-                    }
-                    alt="avatar"
-                  />
-                </div> */}
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {filteredChatData.map((chat) => {
+          const isMe = chat.senderId === user._id;
+          return (
+            <div key={chat._id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+              <div
+                className={`max-w-[70%] px-4 py-2.5 rounded-2xl ${
+                  isMe
+                    ? "bg-[#1d8a8a] text-white rounded-tr-sm"
+                    : "bg-[#232936] text-white rounded-tl-sm"
+                }`}
+              >
+                <p className="text-sm leading-relaxed">{chat.message}</p>
+                <p className="text-[10px] text-white/50 mt-1 text-right">
+                  {chat.createdAt ? new Date(chat.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : chat.timestamp}
+                </p>
               </div>
-              <div className="chat-header text-base-content">
-                {chat.senderId !== sender._id
-                  ? receiver.fullName
-                  : sender.fullName}
-                <time className="text-base-content/50">{chat.timestamp}</time>
-              </div>
-              <div className={`chat-bubble `}>{chat.message}</div>
             </div>
-          ))}
-        </div>
-        <div className="h-full px-3 py-2 input flex gap-3">
-          <button>😊</button>
-          <textarea
-            type="text"
-            className="w-full outline-0"
-            onChange={(e) => setMessage(e.target.value)}
-            value={message}
-          ></textarea>
-          <button onClick={handleMessageSend}>Send</button>
-        </div>
+          );
+        })}
+        <div ref={messagesEndRef} />
       </div>
-    </>
+
+      {/* Input */}
+      <div className="p-4 bg-[#0f1218]">
+        <form
+          onSubmit={handleMessageSend}
+          className="flex items-center gap-2 bg-[#161a23] rounded-xl p-2 border border-white/10"
+        >
+          <input
+            type="text"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Type your message..."
+            className="flex-1 bg-transparent text-white outline-none px-3 text-sm placeholder:text-gray-500"
+          />
+          <button type="button" className="p-2 text-gray-400 hover:text-white transition-colors">
+            <Image size={20} />
+          </button>
+          <button
+            type="submit"
+            disabled={!message.trim()}
+            className="p-2 bg-[#1d8a8a] text-white rounded-lg hover:bg-[#156e6e] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+          >
+            <Send size={18} />
+          </button>
+        </form>
+      </div>
+    </div>
   );
 };
 
