@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useModal } from "../context/ModalContext";
 
 const SiteHeader = () => {
   const { user, isLogin } = useAuth();
   const navigate = useNavigate();
   const [selectedTheme, setSelectedTheme] = useState("light");
+  const { openLogin, openRegister } = useModal();
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("mingoTheme") || "light";
@@ -23,10 +25,10 @@ const SiteHeader = () => {
   return (
     <div className="bg-primary p-2 flex items-center justify-between">
       <h1
-        className="text-3xl font-bold text-primary-content cursor-pointer"
+        className="text-2xl font-bold text-primary-content cursor-pointer"
         onClick={() => navigate("/")}
       >
-        Mingo Chat App
+        ChatApp
       </h1>
 
       <div className="flex items-center gap-3">
@@ -36,20 +38,21 @@ const SiteHeader = () => {
             onClick={() => navigate("/dashboard")}
           >
             <span className="text-primary-content text-lg font-semibold text-nowrap">
-              Welcome, {user?.fullName?.split(" ")[0] || user?.email?.split("@")[0]}
+              Welcome,{" "}
+              {user?.fullName?.split(" ")[0] || user?.email?.split("@")[0]}
             </span>
           </div>
         ) : (
           <>
             <button
               className="btn btn-sm btn-outline btn-primary-content text-primary-content border-primary-content"
-              onClick={() => navigate("/login")}
+              onClick={openLogin}
             >
               Login
             </button>
             <button
               className="btn btn-sm btn-outline btn-primary-content text-primary-content border-primary-content"
-              onClick={() => navigate("/register")}
+              onClick={openRegister}
             >
               Register
             </button>
