@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import path from "path";
 dotenv.config();
 
 import express from "express";
@@ -22,6 +23,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(morgan("dev"));
+app.use("/public", express.static(path.join(process.cwd(), "public")));
 
 // Routes
 app.use("/auth", AuthRouter);

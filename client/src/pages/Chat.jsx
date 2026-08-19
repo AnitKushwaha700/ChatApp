@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Chatting from "../components/chat/Chatting";
+import ProfileModal from "../components/ProfileModal";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import api from "../config/api";
@@ -11,6 +12,8 @@ const Chat = () => {
   const [recentUser, setRecentUser] = useState([]);
   const [selectedFriend, setSelectedFriend] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
 
   const fetchRecentUsers = async () => {
     try {
@@ -96,11 +99,15 @@ const Chat = () => {
         </div>
 
         {/* Current User Header (Bottom) */}
-        <div className="p-4 flex items-center justify-between border-t border-base-content/10 bg-base-200/50">
+        <div className="p-4 flex items-center justify-between border-t border-base-content/10 bg-base-200/50 relative overflow-visible">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-lg shadow-sm">
-                {user?.fullName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
+              <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-lg shadow-sm overflow-hidden border-2 border-base-100">
+                {user?.profilePic ? (
+                  <img src={`${api.defaults.baseURL}${user.profilePic}`} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  user?.fullName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()
+                )}
               </div>
               <div className="absolute top-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-base-200"></div>
             </div>
@@ -109,12 +116,46 @@ const Chat = () => {
               <p className="text-xs text-base-content/70">Online</p>
             </div>
           </div>
-          <div className="flex gap-3 text-base-content/70">
-            <Settings size={18} className="cursor-pointer hover:text-base-content transition-colors" />
+          <div className="flex gap-3 text-base-content/70 items-center">
+            <div className="dropdown dropdown-top dropdown-end relative z-50">
+              <label tabIndex={0} className="cursor-pointer hover:text-base-content transition-colors flex items-center h-full">
+                <Settings size={18} />
+              </label>
+              <ul tabIndex={0} className="dropdown-content z-[100] menu p-2 shadow-xl bg-base-100 rounded-box w-52 border border-base-content/10 mb-2">
+                <li>
+                  <a onClick={() => setIsProfileModalOpen(true)}>Edit Profile</a>
+                </li>
+                <li>
+                  <a onClick={() => setIsThemeDropdownOpen(!isThemeDropdownOpen)}>
+                    Theme {isThemeDropdownOpen ? '▼' : '▶'}
+                  </a>
+                  {isThemeDropdownOpen && (
+                    <ul className="ml-2 mt-1 menu bg-base-200 rounded-box p-2 max-h-48 overflow-y-auto custom-scrollbar">
+                      {["light", "dark", "black", "spotify", "corporate", "ghibli"].map((theme) => (
+                        <li key={theme}>
+                          <a 
+                            onClick={() => {
+                              document.documentElement.setAttribute("data-theme", theme);
+                              localStorage.setItem("theme", theme);
+                              localStorage.setItem("mingoTheme", theme);
+                            }}
+                          >
+                            {theme.charAt(0).toUpperCase() + theme.slice(1)}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              </ul>
+            </div>
             <LogOut size={18} className="cursor-pointer hover:text-error transition-colors" onClick={handleLogout} />
           </div>
         </div>
       </div>
+
+      {/* Profile Modal */}
+      <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
 
       {/* Chat Area */}
       <div className="flex-1 flex flex-col h-full bg-base-100">

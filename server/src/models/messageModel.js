@@ -10,12 +10,20 @@ const messageSchema = mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    messageType: {
+      type: String,
+      enum: ["text", "image", "document", "audio", "video"],
+      default: "text",
+    },
     message: {
       type: String,
-      required: true,
+      required: function() { return this.messageType === 'text'; },
+    },
+    mediaUrl: {
+      type: String,
     },
   },
-  { timestamps: true },
+  { timestamps: true }
 );
 
 const Message = mongoose.model("Message", messageSchema);

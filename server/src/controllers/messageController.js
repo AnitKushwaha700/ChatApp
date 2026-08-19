@@ -2,14 +2,20 @@ import Message from "../models/messageModel.js";
 
 export const SendMessage = async (req, res) => {
   try {
-    const { receiverID, message } = req.body;
+    const { receiverID, message, messageType } = req.body;
     const currentUser = req.user;
+
+    let mediaUrl = undefined;
+    if (req.file) {
+      mediaUrl = `/public/uploads/messages/${req.file.filename}`;
+    }
 
     console.log("Receiver ID:", receiverID);
     console.log("Message:", message);
+    console.log("Message Type:", messageType);
 
-    if (!receiverID || !message) {
-      const error = new Error("All fields required");
+    if (!receiverID || (!message && !mediaUrl)) {
+      const error = new Error("Receiver ID and message/media required");
       error.statusCode = 400;
       return next(error);
     }
@@ -17,7 +23,9 @@ export const SendMessage = async (req, res) => {
     const newMessage = await Message.create({
       senderId: currentUser._id,
       receiverId: receiverID,
-      message,
+      message: message || "Sent an attachment",
+      messageType: messageType || "text",
+      mediaUrl,
     });
     res
       .status(201)

@@ -17,6 +17,11 @@ export const updateProfile = async (req, res, next) => {
     const currentUser = req.user;
 
     const { fullName, email, mobileNumber } = req.body;
+    let profilePicUrl = undefined;
+
+    if (req.file) {
+      profilePicUrl = `/public/uploads/profile_pics/${req.file.filename}`;
+    }
 
     if (email) {
       const existingUser = await User.findOne({
@@ -36,6 +41,7 @@ export const updateProfile = async (req, res, next) => {
         ...(fullName && { fullName }),
         ...(email && { email }),
         ...(mobileNumber !== undefined && { mobileNumber }),
+        ...(profilePicUrl && { profilePic: profilePicUrl }),
       },
       { new: true },
     ).select("-password");
