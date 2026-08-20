@@ -20,10 +20,15 @@ const Chat = () => {
 
   const fetchRecentUsers = async (query = "") => {
     try {
-      const res = await api.get(`/user/allusers?search=${query}`);
-      setRecentUser(res.data.data);
+      if (query.trim() === "") {
+        const res = await api.get("/user/conversations");
+        setRecentUser(res.data.data);
+      } else {
+        const res = await api.get(`/user/allusers?search=${query}`);
+        setRecentUser(res.data.data);
+      }
     } catch (error) {
-      console.error("Failed to fetch recent users", error);
+      console.error("Failed to fetch users", error);
     }
   };
 

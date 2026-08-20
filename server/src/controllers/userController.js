@@ -1,4 +1,5 @@
 import User from "../models/userModel.js";
+import Message from "../models/messageModel.js";
 
 export const getAllUsers = async (req, res, next) => {
   try {
@@ -61,6 +62,41 @@ export const updateProfile = async (req, res, next) => {
       message: "Profile updated successfully",
       data: updatedUser,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getConversations = async (req, res, next) => {
+  try {
+    const currentUser = req.user;
+
+    // Find all messages where current user is sender or receiver
+    const messages = await Message.find({
+      $or: [
+        { senderId: currentUser._id },
+        { receiverId: currentUser._id },
+      ],
+    }).sort({ createdAt: -1 });
+
+    // Extract unique user IDs that are not the current user
+    const userIds = new Set();
+    messages.forEach((msg) => {
+      if (msg.senderId.toString() !== currentUser._id.toString()) {
+        userIds.add(msg.senderId.toString());
+      }
+      if (msg.receiverId.toString() !== currentUser._id.toString()) {
+        userIds.add(msg.receiverId.toString());
+      }
+    });
+
+    // Fetch the actual user documents
+    const users = await User.find({ _id: { $in: Array.from(userIds) } }).select("-password");
+
+    // Optional: Sort users by most recent message (since userIds were added in order of newest message first)
+    const sortedUsers = Array.from(userIds).map(id => users.find(u => u._id.toString() === id)).filter(Boolean);
+
+    res.status(200).json({ data: sortedUsers });
   } catch (error) {
     next(error);
   }

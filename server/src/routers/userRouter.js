@@ -1,5 +1,5 @@
-    import express from "express";
-import { getAllUsers, updateProfile } from "../controllers/userController.js";
+import express from "express";
+import { getAllUsers, updateProfile, getConversations } from "../controllers/userController.js";
 import { SendMessage, GetMessages, DeleteMessage, ClearChat } from "../controllers/messageController.js";
 import { Protect } from "../middleware/authMiddleware.js";
 import { uploadProfilePic, uploadMessageMedia } from "../config/multer.js";
@@ -7,6 +7,7 @@ import { uploadProfilePic, uploadMessageMedia } from "../config/multer.js";
 const router = express.Router();
 
 router.get("/allUsers", Protect, getAllUsers);
+router.get("/conversations", Protect, getConversations);
 router.put("/profile", Protect, uploadProfilePic.single("profilePic"), updateProfile);
 
 router.post("/send-message", Protect, uploadMessageMedia.single("media"), SendMessage);
