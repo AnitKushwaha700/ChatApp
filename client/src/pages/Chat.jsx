@@ -61,7 +61,7 @@ const Chat = () => {
   return (
     <div className="flex h-screen bg-base-100 overflow-hidden text-base-content">
       {/* Sidebar */}
-      <div className="w-80 bg-base-200 flex flex-col h-full border-r border-base-content/10 shrink-0">
+      <div className={`${selectedFriend ? 'hidden md:flex' : 'flex'} w-full md:w-80 bg-base-200 flex-col h-full border-r border-base-content/10 shrink-0`}>
         
         {/* Search Bar (Top) */}
         <div className="p-4 border-b border-base-content/10">
@@ -199,7 +199,7 @@ const Chat = () => {
       <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col h-full bg-base-100">
+      <div className={`${!selectedFriend ? 'hidden md:flex' : 'flex'} flex-1 flex-col h-full bg-base-100`}>
         {selectedFriend ? (
           <Chatting
             selectedFriend={selectedFriend}

@@ -1,8 +1,16 @@
 import React, { useEffect, useState, useRef } from "react";
 import api from "../../config/api";
 import { useAuth } from "../../context/AuthContext";
-import { X, Image as ImageIcon, Send, Plus, Mic, FileText, Camera, Music, UserPlus, StopCircle, Smile } from "lucide-react";
+import { X, Image as ImageIcon, Send, Plus, Mic, FileText, Camera, Music, UserPlus, StopCircle, Smile, ArrowLeft } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
+import { motion } from "motion/react";
+
+const isEmojiOnly = (text) => {
+  if (!text) return false;
+  const noSpace = text.replace(/[\s\n]/g, '');
+  if (noSpace.length === 0) return false;
+  return /^[\p{Emoji_Presentation}\p{Extended_Pictographic}]+$/u.test(noSpace);
+};
 
 const Chatting = ({ selectedFriend, setSelectedFriend }) => {
   const { user } = useAuth();
@@ -140,8 +148,20 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [filteredChatData]);
 
-  const renderMessageContent = (chat) => {
+  const renderMessageContent = (chat, emojiOnly) => {
     if (chat.messageType === "text") {
+      if (emojiOnly) {
+        return (
+          <motion.div
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            className="text-5xl leading-none"
+          >
+            {chat.message}
+          </motion.div>
+        );
+      }
       return <p className="text-sm leading-relaxed">{chat.message}</p>;
     } else if (chat.messageType === "image" && chat.mediaUrl) {
       return <img src={`${api.defaults.baseURL}${chat.mediaUrl}`} alt="Attachment" className="max-w-[250px] rounded-lg mt-1 object-cover" />;
@@ -163,6 +183,12 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
       {/* Header */}
       <div className="p-4 flex items-center justify-between border-b border-base-content/10 bg-base-200">
         <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setSelectedFriend(null)} 
+            className="md:hidden text-base-content/70 hover:text-base-content transition-colors mr-1 cursor-pointer bg-transparent border-none p-0 outline-none"
+          >
+            <ArrowLeft size={20} />
+          </button>
           <div className="relative">
             <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-base-100">
               {selectedFriend?.profilePic ? (
@@ -187,14 +213,15 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
       <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
         {filteredChatData.map((chat) => {
           const isMe = chat.senderId === user._id;
+          const emojiOnly = chat.messageType === "text" && isEmojiOnly(chat.message);
           return (
             <div key={chat._id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl ${
-                  isMe ? "bg-primary text-primary-content rounded-tr-sm shadow-md" : "bg-base-200 text-base-content rounded-tl-sm shadow-md border border-base-content/5"
+                  emojiOnly ? "bg-transparent shadow-none" : isMe ? "bg-primary text-primary-content rounded-tr-sm shadow-md" : "bg-base-200 text-base-content rounded-tl-sm shadow-md border border-base-content/5"
                 }`}
               >
-                {renderMessageContent(chat)}
-                <p className={`text-[10px] mt-1 text-right ${isMe ? "text-primary-content/70" : "text-base-content/50"}`}>
+                {renderMessageContent(chat, emojiOnly)}
+                <p className={`text-[10px] mt-1 text-right ${emojiOnly ? "text-base-content/50" : isMe ? "text-primary-content/70" : "text-base-content/50"}`}>
                   {chat.createdAt ? new Date(chat.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : chat.timestamp}
                 </p>
               </div>
@@ -206,7 +233,7 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
 
       {/* Input */}
       <div className="p-3 bg-base-100 border-t border-base-content/10">
-        <form onSubmit={(e) => handleMessageSend(e, "text")} className="flex items-center gap-2 bg-base-200 rounded-full p-1.5 border border-base-content/10 shadow-sm relative">
+        <form onSubmit={(e) => handleMessageSend(e, "text")} className="flex items-center gap-1 sm:gap-2 bg-base-200 rounded-full p-1 sm:p-1.5 border border-base-content/10 shadow-sm relative">
           
           {/* Attachment Menu */}
           <div className="relative" ref={attachmentRef}>
