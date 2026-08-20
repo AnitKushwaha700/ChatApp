@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import api from "../../config/api";
+import socketAPI from "../../config/webSocket";
 import { useAuth } from "../../context/AuthContext";
 import { X, Image as ImageIcon, Send, Plus, Mic, FileText, Camera, Music, UserPlus, StopCircle, Smile, ArrowLeft } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
@@ -43,11 +44,12 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
 
     try {
       if (type === "text") {
-        await api.post("/user/send-message", {
+        const res = await api.post("/user/send-message", {
           receiverID: selectedFriend._id,
           message,
           messageType: "text",
         });
+        setFilteredChatData((prev) => [...prev, res.data.data]);
         setMessage("");
       } else if (file) {
         const formData = new FormData();
@@ -55,12 +57,12 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
         formData.append("messageType", type);
         formData.append("media", file);
         
-        await api.post("/user/send-message", formData, {
+        const res = await api.post("/user/send-message", formData, {
           headers: { "Content-Type": "multipart/form-data" }
         });
+        setFilteredChatData((prev) => [...prev, res.data.data]);
       }
       
-      fetchChatData();
       setIsAttachmentOpen(false);
       setShowEmojiPicker(false);
     } catch (error) {
@@ -126,8 +128,24 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
 
   useEffect(() => {
     fetchChatData();
-    const interval = setInterval(() => { fetchChatData(); }, 2000);
-    return () => clearInterval(interval);
+  }, [selectedFriend]);
+
+  useEffect(() => {
+    const handleNewMessage = (newMessage) => {
+      if (newMessage.senderId === selectedFriend?._id || newMessage.receiverId === selectedFriend?._id) {
+        setFilteredChatData((prev) => {
+          // Check if message already exists to avoid duplicates
+          if (prev.find(msg => msg._id === newMessage._id)) return prev;
+          return [...prev, newMessage];
+        });
+      }
+    };
+
+    socketAPI.on("newMessage", handleNewMessage);
+
+    return () => {
+      socketAPI.off("newMessage", handleNewMessage);
+    };
   }, [selectedFriend]);
 
   useEffect(() => {

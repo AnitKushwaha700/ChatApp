@@ -1,6 +1,7 @@
 import Message from "../models/messageModel.js";
+import { OnlineUsers, getIo } from "../config/webSocket.js";
 
-export const SendMessage = async (req, res) => {
+export const SendMessage = async (req, res, next) => {
   try {
     const { receiverID, message, messageType } = req.body;
     const currentUser = req.user;
@@ -27,6 +28,13 @@ export const SendMessage = async (req, res) => {
       messageType: messageType || "text",
       mediaUrl,
     });
+
+    const io = getIo();
+    const receiverSocketId = OnlineUsers[receiverID];
+    if (io && receiverSocketId) {
+      io.to(receiverSocketId).emit("newMessage", newMessage);
+    }
+
     res
       .status(201)
       .json({ message: "Message sent successfully", data: newMessage });

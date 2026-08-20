@@ -4,6 +4,7 @@ import ProfileModal from "../components/ProfileModal";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import api from "../config/api";
+import socketAPI from "../config/webSocket";
 import { LogOut, Settings, Search, Edit3, Palette } from "lucide-react";
 
 const Chat = () => {
@@ -31,10 +32,16 @@ const Chat = () => {
       navigate("/");
     } else {
       fetchRecentUsers();
+      if (user) {
+        socketAPI.emit("createPath", user._id);
+      }
     }
-  }, [isLogin, navigate]);
+  }, [isLogin, navigate, user]);
 
   const handleLogout = () => {
+    if (user) {
+      socketAPI.emit("destroyPath", user._id);
+    }
     setUser(null);
     sessionStorage.removeItem("AppUser");
     setIsLogin(false);
@@ -55,7 +62,8 @@ const Chat = () => {
   if (!isLogin) return null;
 
   const filteredUsers = recentUser.filter(u =>
-    (u.fullName || u.email).toLowerCase().includes(searchQuery.toLowerCase())
+    (u.fullName || u.email).toLowerCase().includes(searchQuery.toLowerCase()) &&
+    (u.fullName || "").toLowerCase() !== "john doe"
   );
 
   return (
@@ -94,8 +102,12 @@ const Chat = () => {
               }`}
             >
               <div className="relative shrink-0">
-                <div className="w-10 h-10 rounded-full bg-neutral text-neutral-content flex items-center justify-center font-bold">
-                  {u.fullName?.charAt(0).toUpperCase() || u.email?.charAt(0).toUpperCase()}
+                <div className="w-10 h-10 rounded-full bg-neutral text-neutral-content flex items-center justify-center font-bold overflow-hidden">
+                  {u.profilePic ? (
+                    <img src={`${api.defaults.baseURL}${u.profilePic}`} alt="Profile" className="w-full h-full object-cover" />
+                  ) : (
+                    u.fullName?.charAt(0).toUpperCase() || u.email?.charAt(0).toUpperCase()
+                  )}
                 </div>
                 <div className="absolute top-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-base-200"></div>
               </div>

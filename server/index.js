@@ -11,7 +11,7 @@ import AuthRouter from "./src/routers/authRouter.js";
 import UserRouter from "./src/routers/userRouter.js";
 
 import http from "http";
-import { Socket } from "socket.io";
+import { Server } from "socket.io";
 import websocket from "./src/config/webSocket.js";
 
 const app = express();
@@ -58,7 +58,7 @@ const io = new Server(httpServer, {
   },
 });
 
-WebSocket(io);
+websocket(io);
 
 httpServer.listen(PORT, async () => {
   await connectDB();
