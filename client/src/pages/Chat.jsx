@@ -20,15 +20,20 @@ const Chat = () => {
 
   const fetchRecentUsers = async (query = "") => {
     try {
-      if (query.trim() === "") {
-        const res = await api.get("/user/conversations");
-        setRecentUser(res.data.data);
-      } else {
-        const res = await api.get(`/user/allusers?search=${query}`);
-        setRecentUser(res.data.data);
-      }
+      const res = await api.get(`/user/allusers?search=${query}`);
+      setRecentUser(res.data.data);
     } catch (error) {
       console.error("Failed to fetch users", error);
+    }
+  };
+
+  const fetchMe = async () => {
+    try {
+      const res = await api.get("/user/me");
+      setUser(res.data.data);
+      sessionStorage.setItem("AppUser", JSON.stringify(res.data.data));
+    } catch (error) {
+      console.error("Failed to fetch me", error);
     }
   };
 
@@ -36,12 +41,12 @@ const Chat = () => {
     if (!isLogin) {
       navigate("/");
     } else {
-      fetchRecentUsers();
+      fetchMe();
       if (user) {
         socketAPI.emit("createPath", user._id);
       }
     }
-  }, [isLogin, navigate, user]);
+  }, [isLogin, navigate]);
 
   const handleLogout = () => {
     if (user) {

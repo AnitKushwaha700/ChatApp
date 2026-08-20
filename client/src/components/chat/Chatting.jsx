@@ -14,7 +14,7 @@ const isEmojiOnly = (text) => {
 };
 
 const Chatting = ({ selectedFriend, setSelectedFriend }) => {
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [filteredChatData, setFilteredChatData] = useState([]);
   const [message, setMessage] = useState("");
   const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
@@ -30,6 +30,36 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
   const audioChunksRef = useRef([]);
   const timerRef = useRef(null);
   const attachmentRef = useRef(null);
+
+  const handleSendRequest = async () => {
+    try {
+      const res = await api.post(`/user/request/${selectedFriend._id}`);
+      setUser(res.data.data);
+      sessionStorage.setItem("AppUser", JSON.stringify(res.data.data));
+    } catch (error) {
+      console.error("Failed to send request", error);
+    }
+  };
+
+  const handleAcceptRequest = async () => {
+    try {
+      const res = await api.post(`/user/accept/${selectedFriend._id}`);
+      setUser(res.data.data);
+      sessionStorage.setItem("AppUser", JSON.stringify(res.data.data));
+    } catch (error) {
+      console.error("Failed to accept request", error);
+    }
+  };
+
+  const handleDeclineRequest = async () => {
+    try {
+      const res = await api.post(`/user/decline/${selectedFriend._id}`);
+      setUser(res.data.data);
+      sessionStorage.setItem("AppUser", JSON.stringify(res.data.data));
+    } catch (error) {
+      console.error("Failed to decline request", error);
+    }
+  };
 
   const fetchChatData = async () => {
     try {

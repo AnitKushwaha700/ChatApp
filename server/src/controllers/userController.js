@@ -101,3 +101,82 @@ export const getConversations = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getMe = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).select("-password");
+    res.status(200).json({ data: user });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const sendRequest = async (req, res, next) => {
+  try {
+    const { friendId } = req.params;
+    const currentUser = req.user;
+
+    if (friendId === currentUser._id.toString()) {
+      return res.status(400).json({ message: "Cannot send request to yourself" });
+    }
+
+    await User.findByIdAndUpdate(currentUser._id, {
+      $addToSet: { sentRequests: friendId }
+    });
+
+    await User.findByIdAndUpdate(friendId, {
+      $addToSet: { pendingRequests: currentUser._id }
+    });
+
+    const updatedUser = await User.findById(currentUser._id).select("-password");
+    res.status(200).json({ message: "Request sent", data: updatedUser });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const acceptRequest = async (req, res, next) => {
+  try {
+    const { friendId } = req.params;
+    const currentUser = req.user;
+
+    // Remove from requests, add to friends for current user
+    await User.findByIdAndUpdate(currentUser._id, {
+      $pull: { pendingRequests: friendId },
+      $addToSet: { friends: friendId }
+    });
+
+    // Remove from requests, add to friends for friend
+    await User.findByIdAndUpdate(friendId, {
+      $pull: { sentRequests: currentUser._id },
+      $addToSet: { friends: currentUser._id }
+    });
+
+    const updatedUser = await User.findById(currentUser._id).select("-password");
+    res.status(200).json({ message: "Request accepted", data: updatedUser });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const declineRequest = async (req, res, next) => {
+  try {
+    const { friendId } = req.params;
+    const currentUser = req.user;
+
+    // Remove from pending for current
+    await User.findByIdAndUpdate(currentUser._id, {
+      $pull: { pendingRequests: friendId }
+    });
+
+    // Remove from sent for friend
+    await User.findByIdAndUpdate(friendId, {
+      $pull: { sentRequests: currentUser._id }
+    });
+
+    const updatedUser = await User.findById(currentUser._id).select("-password");
+    res.status(200).json({ message: "Request declined", data: updatedUser });
+  } catch (error) {
+    next(error);
+  }
+};
