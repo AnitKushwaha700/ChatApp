@@ -28,7 +28,7 @@ const Home = () => {
   };
 
   return (
-    <div className="h-[calc(100vh-65px)] bg-base-200 flex flex-col justify-center items-center px-4 overflow-hidden relative">
+    <div className="min-h-[calc(100vh-65px)] py-12 lg:py-0 bg-base-200 flex flex-col justify-center items-center px-4 overflow-x-hidden relative">
       {/* Background decoration */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
         <motion.div

@@ -44,16 +44,12 @@ const RegisterModal = () => {
       Error.fullName = "Only alphabets and spaces allowed";
     }
 
-    if (
-      !/^[\w.]+@(gmail|outlook|yahoo|ricr)\.(com|in|co\.in)$/.test(
-        formData.email
-      )
-    ) {
-      Error.email = "Use proper email format";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      Error.email = "Use a valid email address format";
     }
 
-    if (!/^[6-9]\d{9}$/.test(formData.mobileNumber)) {
-      Error.mobileNumber = "Only Indian mobile numbers allowed";
+    if (!/^\d{10}$/.test(formData.mobileNumber)) {
+      Error.mobileNumber = "Please enter a valid 10-digit mobile number";
     }
 
     if (formData.password !== formData.confirmPassword) {

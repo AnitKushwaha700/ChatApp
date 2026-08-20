@@ -10,32 +10,17 @@ const SiteHeader = () => {
   const navigate = useNavigate();
   const [selectedTheme, setSelectedTheme] = useState("light");
   const { openLogin, openRegister } = useModal();
-  const [allUsers, setAllUsers] = useState([]);
-
   useEffect(() => {
-    const savedTheme = localStorage.getItem("mingoTheme") || "light";
+    const savedTheme = localStorage.getItem("theme") || "light";
     document.documentElement.setAttribute("data-theme", savedTheme);
     setSelectedTheme(savedTheme);
   }, []);
 
-  useEffect(() => {
-    if (isLogin) {
-      const fetchUsers = async () => {
-        try {
-          const res = await api.get("/user/allUsers");
-          setAllUsers(res.data.data);
-        } catch (error) {
-          console.error("Failed to fetch users", error);
-        }
-      };
-      fetchUsers();
-    }
-  }, [isLogin]);
 
   const handleThemeChange = (e) => {
     const theme = e.target.value;
     setSelectedTheme(theme);
-    localStorage.setItem("mingoTheme", theme);
+    localStorage.setItem("theme", theme);
     document.documentElement.setAttribute("data-theme", theme);
   };
 
@@ -46,30 +31,19 @@ const SiteHeader = () => {
     navigate("/");
   };
 
-  const handleSwitchUser = async (userId) => {
-    try {
-      const res = await api.post("/auth/switch", { userId });
-      const switchedUser = res.data.data;
-      setUser(switchedUser);
-      sessionStorage.setItem("AppUser", JSON.stringify(switchedUser));
-      window.location.reload();
-    } catch (error) {
-      console.error("Failed to switch user", error);
-    }
-  };
 
   const userInitial = user?.fullName ? user.fullName.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase();
 
   return (
-    <div className="bg-base-100/80 backdrop-blur-md sticky top-0 z-40 border-b border-base-200 shadow-sm p-3 flex items-center justify-between px-6">
+    <div className="bg-base-100/80 backdrop-blur-md sticky top-0 z-40 border-b border-base-200 shadow-sm p-2 sm:p-3 flex items-center justify-between px-3 sm:px-6">
       <h1
-        className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary cursor-pointer hover:opacity-80 transition-opacity"
+        className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary cursor-pointer hover:opacity-80 transition-opacity"
         onClick={() => navigate("/")}
       >
         ChatApp
       </h1>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         {isLogin ? (
           <details className="dropdown dropdown-end">
             <summary
@@ -92,24 +66,7 @@ const SiteHeader = () => {
                   <span className="font-medium">Dashboard</span>
                 </a>
               </li>
-              
-              {allUsers.length > 0 && (
-                <>
-                  <div className="divider my-0 text-[10px] text-base-content/40 uppercase font-bold px-4 py-1">Switch Account</div>
-                  <div className="max-h-32 overflow-y-auto overflow-x-hidden custom-scrollbar">
-                    {allUsers.map((u) => (
-                      <li key={u._id} className="mb-0.5">
-                        <a onClick={() => handleSwitchUser(u._id)} className="flex items-center gap-2 hover:bg-base-200 px-3 py-2">
-                          <div className="w-6 h-6 rounded-full bg-secondary text-secondary-content flex items-center justify-center shrink-0">
-                            <span className="text-[10px] font-bold leading-none">{u.fullName?.charAt(0).toUpperCase() || u.email?.charAt(0).toUpperCase()}</span>
-                          </div>
-                          <span className="font-medium text-xs truncate max-w-[110px]">{u.fullName || u.email}</span>
-                        </a>
-                      </li>
-                    ))}
-                  </div>
-                </>
-              )}
+
 
               <div className="divider my-0"></div>
               <li className="mt-1">
@@ -121,15 +78,15 @@ const SiteHeader = () => {
             </ul>
           </details>
         ) : (
-          <div className="flex gap-2">
+          <div className="flex gap-1 sm:gap-2">
             <button
-              className="btn btn-sm btn-ghost hover:bg-primary/10 hover:text-primary font-medium"
+              className="btn btn-xs sm:btn-sm btn-ghost hover:bg-primary/10 hover:text-primary font-medium px-2 sm:px-3"
               onClick={openLogin}
             >
               Login
             </button>
             <button
-              className="btn btn-sm btn-primary shadow-sm"
+              className="btn btn-xs sm:btn-sm btn-primary shadow-sm px-2 sm:px-3"
               onClick={openRegister}
             >
               Register
@@ -142,7 +99,7 @@ const SiteHeader = () => {
         <select
           name="theme"
           id="theme"
-          className="select select-sm select-bordered w-full max-w-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
+          className="select select-xs sm:select-sm select-bordered w-20 sm:w-full max-w-[100px] sm:max-w-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
           value={selectedTheme}
           onChange={handleThemeChange}
         >
