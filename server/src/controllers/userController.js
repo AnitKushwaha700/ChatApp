@@ -3,8 +3,19 @@ import User from "../models/userModel.js";
 export const getAllUsers = async (req, res, next) => {
   try {
     const currentUser = req.user;
+    const { search } = req.query;
 
-    const users = await User.find({ _id: { $ne: currentUser._id } }).select("-password");
+    const query = { _id: { $ne: currentUser._id } };
+
+    if (search) {
+      query.$or = [
+        { fullName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+        { mobileNumber: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    const users = await User.find(query).select("-password").limit(50);
 
     res.status(200).json({ data: users });
   } catch (error) {

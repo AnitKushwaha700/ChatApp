@@ -18,9 +18,9 @@ const Chat = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const settingsRef = React.useRef(null);
 
-  const fetchRecentUsers = async () => {
+  const fetchRecentUsers = async (query = "") => {
     try {
-      const res = await api.get("/user/allusers");
+      const res = await api.get(`/user/allusers?search=${query}`);
       setRecentUser(res.data.data);
     } catch (error) {
       console.error("Failed to fetch recent users", error);
@@ -49,6 +49,14 @@ const Chat = () => {
   };
 
   useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      if (isLogin) fetchRecentUsers(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery, isLogin]);
+
+  useEffect(() => {
     const handleClickOutside = (event) => {
       if (settingsRef.current && !settingsRef.current.contains(event.target)) {
         setIsSettingsOpen(false);
@@ -61,9 +69,8 @@ const Chat = () => {
 
   if (!isLogin) return null;
 
-  const filteredUsers = recentUser.filter(u =>
-    (u.fullName || u.email).toLowerCase().includes(searchQuery.toLowerCase()) &&
-    (u.fullName || "").toLowerCase() !== "john doe"
+  const displayUsers = recentUser.filter(
+    (u) => (u.fullName || "").toLowerCase() !== "john doe"
   );
 
   return (
@@ -93,7 +100,7 @@ const Chat = () => {
 
         {/* User List */}
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {filteredUsers.map((u) => (
+          {displayUsers.map((u) => (
             <div
               key={u._id}
               onClick={() => setSelectedFriend(u)}
@@ -116,7 +123,7 @@ const Chat = () => {
               </div>
             </div>
           ))}
-          {filteredUsers.length === 0 && (
+          {displayUsers.length === 0 && (
             <div className="text-center text-sm text-base-content/50 mt-8">
               No users found
             </div>
