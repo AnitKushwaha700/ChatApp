@@ -1,6 +1,6 @@
-import express from "express";
+    import express from "express";
 import { getAllUsers, updateProfile } from "../controllers/userController.js";
-import { SendMessage, GetMessages } from "../controllers/messageController.js";
+import { SendMessage, GetMessages, DeleteMessage, ClearChat } from "../controllers/messageController.js";
 import { Protect } from "../middleware/authMiddleware.js";
 import { uploadProfilePic, uploadMessageMedia } from "../config/multer.js";
 
@@ -11,5 +11,7 @@ router.put("/profile", Protect, uploadProfilePic.single("profilePic"), updatePro
 
 router.post("/send-message", Protect, uploadMessageMedia.single("media"), SendMessage);
 router.get("/get-messages/:friendId", Protect, GetMessages);
+router.delete("/message/:messageId", Protect, DeleteMessage);
+router.delete("/messages/:friendId", Protect, ClearChat);
 
 export default router;

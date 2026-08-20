@@ -22,6 +22,16 @@ const messageSchema = mongoose.Schema(
     mediaUrl: {
       type: String,
     },
+    deletedBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      }
+    ],
+    isDeletedForEveryone: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

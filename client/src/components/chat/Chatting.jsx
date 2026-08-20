@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import api from "../../config/api";
 import socketAPI from "../../config/webSocket";
 import { useAuth } from "../../context/AuthContext";
-import { X, Image as ImageIcon, Send, Plus, Mic, FileText, Camera, Music, UserPlus, StopCircle, Smile, ArrowLeft } from "lucide-react";
+import { X, Image as ImageIcon, Send, Plus, Mic, FileText, Camera, Music, UserPlus, StopCircle, Smile, ArrowLeft, Trash2, MoreVertical } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import { motion } from "motion/react";
 
@@ -21,6 +21,8 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [activeMessageDropdown, setActiveMessageDropdown] = useState(null);
+  const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
   
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -35,6 +37,37 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
       setFilteredChatData(res.data.data);
     } catch (error) {
       console.error("Failed to fetch chat data", error);
+    }
+  };
+
+  const handleClearChat = async () => {
+    if (window.confirm("Are you sure you want to clear this chat?")) {
+      try {
+        await api.delete(`/user/messages/${selectedFriend._id}`);
+        setFilteredChatData([]);
+        setIsHeaderMenuOpen(false);
+      } catch (error) {
+        console.error("Failed to clear chat", error);
+      }
+    }
+  };
+
+  const handleDeleteMessage = async (messageId, type) => {
+    try {
+      await api.delete(`/user/message/${messageId}?type=${type}`);
+      if (type === "for_me") {
+        setFilteredChatData(prev => prev.filter(m => m._id !== messageId));
+      } else {
+        setFilteredChatData(prev => prev.map(m => {
+          if (m._id === messageId) {
+            return { ...m, message: "🚫 This message was deleted", messageType: "text", mediaUrl: null };
+          }
+          return m;
+        }));
+      }
+      setActiveMessageDropdown(null);
+    } catch (error) {
+      console.error("Failed to delete message", error);
     }
   };
 
@@ -141,10 +174,21 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
       }
     };
 
+    const handleMessageDeleted = ({ messageId }) => {
+      setFilteredChatData((prev) => prev.map((m) => {
+        if (m._id === messageId) {
+          return { ...m, message: "🚫 This message was deleted", messageType: "text", mediaUrl: null };
+        }
+        return m;
+      }));
+    };
+
     socketAPI.on("newMessage", handleNewMessage);
+    socketAPI.on("messageDeleted", handleMessageDeleted);
 
     return () => {
       socketAPI.off("newMessage", handleNewMessage);
+      socketAPI.off("messageDeleted", handleMessageDeleted);
     };
   }, [selectedFriend]);
 
@@ -157,10 +201,16 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
       if (showEmojiPicker && !event.target.closest('.emoji-picker-react') && !event.target.closest('button')) {
         setShowEmojiPicker(false);
       }
+      if (activeMessageDropdown && !event.target.closest('.message-dropdown')) {
+        setActiveMessageDropdown(null);
+      }
+      if (isHeaderMenuOpen && !event.target.closest('.header-menu')) {
+        setIsHeaderMenuOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showEmojiPicker]);
+  }, [showEmojiPicker, activeMessageDropdown, isHeaderMenuOpen]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -222,9 +272,21 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
             <p className="text-xs text-base-content/70">Online</p>
           </div>
         </div>
-        <button onClick={() => setSelectedFriend(null)} className="text-base-content/70 hover:text-base-content transition-colors">
-          <X size={20} />
-        </button>
+        <div className="flex items-center gap-2 relative header-menu">
+          <button onClick={() => setIsHeaderMenuOpen(!isHeaderMenuOpen)} className="text-base-content/70 hover:text-base-content transition-colors p-1 bg-transparent border-none outline-none cursor-pointer">
+            <MoreVertical size={20} />
+          </button>
+          {isHeaderMenuOpen && (
+            <div className="absolute top-10 right-8 bg-base-100 border border-base-content/10 rounded-lg shadow-xl z-50 w-36 overflow-hidden">
+              <button onClick={handleClearChat} className="w-full text-left px-4 py-2 text-sm text-error hover:bg-base-200 transition-colors border-none outline-none cursor-pointer">
+                Clear Chat
+              </button>
+            </div>
+          )}
+          <button onClick={() => setSelectedFriend(null)} className="text-base-content/70 hover:text-base-content transition-colors p-1 bg-transparent border-none outline-none cursor-pointer">
+            <X size={20} />
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -233,16 +295,42 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
           const isMe = chat.senderId === user._id;
           const emojiOnly = chat.messageType === "text" && isEmojiOnly(chat.message);
           return (
-            <div key={chat._id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl ${
+            <div key={chat._id} className={`flex ${isMe ? "justify-end" : "justify-start"} relative group message-dropdown`}>
+              {isMe && !emojiOnly && (
+                <div className="hidden group-hover:flex items-center mr-2 animate-in fade-in zoom-in duration-200">
+                  <button onClick={() => setActiveMessageDropdown(activeMessageDropdown === chat._id ? null : chat._id)} className="flex items-center justify-center w-7 h-7 rounded-full text-base-content/50 hover:text-error hover:bg-error/10 hover:shadow-sm transition-all duration-200 bg-transparent border-none outline-none cursor-pointer">
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              )}
+
+              <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl relative ${
                   emojiOnly ? "bg-transparent shadow-none" : isMe ? "bg-primary text-primary-content rounded-tr-sm shadow-md" : "bg-base-200 text-base-content rounded-tl-sm shadow-md border border-base-content/5"
                 }`}
               >
+                {activeMessageDropdown === chat._id && (
+                  <div className={`absolute top-full mt-1 ${isMe ? 'right-0' : 'left-0'} bg-base-100 border border-base-content/10 rounded-2xl shadow-xl z-50 w-48 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200`}>
+                    <button onClick={() => handleDeleteMessage(chat._id, "for_me")} className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-base-200 transition-colors text-base-content font-medium border-none outline-none cursor-pointer">
+                      <Trash2 size={16} /> Delete for me
+                    </button>
+                    {isMe && <button onClick={() => handleDeleteMessage(chat._id, "for_everyone")} className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-error/10 transition-colors text-error font-medium border-none outline-none cursor-pointer">
+                      <Trash2 size={16} /> Delete for everyone
+                    </button>}
+                  </div>
+                )}
                 {renderMessageContent(chat, emojiOnly)}
                 <p className={`text-[10px] mt-1 text-right ${emojiOnly ? "text-base-content/50" : isMe ? "text-primary-content/70" : "text-base-content/50"}`}>
                   {chat.createdAt ? new Date(chat.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : chat.timestamp}
                 </p>
               </div>
+
+              {!isMe && !emojiOnly && (
+                <div className="hidden group-hover:flex items-center ml-2 animate-in fade-in zoom-in duration-200">
+                  <button onClick={() => setActiveMessageDropdown(activeMessageDropdown === chat._id ? null : chat._id)} className="flex items-center justify-center w-7 h-7 rounded-full text-base-content/50 hover:text-error hover:bg-error/10 hover:shadow-sm transition-all duration-200 bg-transparent border-none outline-none cursor-pointer">
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}

@@ -102,7 +102,7 @@ const Chat = () => {
               }`}
             >
               <div className="relative shrink-0">
-                <div className="w-10 h-10 rounded-full bg-neutral text-neutral-content flex items-center justify-center font-bold overflow-hidden">
+                <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold overflow-hidden border-2 border-base-100">
                   {u.profilePic ? (
                     <img src={`${api.defaults.baseURL}${u.profilePic}`} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
