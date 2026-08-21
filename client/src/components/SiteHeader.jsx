@@ -35,7 +35,7 @@ const SiteHeader = () => {
   const userInitial = user?.fullName ? user.fullName.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase();
 
   return (
-    <div className="bg-base-100/80 backdrop-blur-md sticky top-0 z-40 border-b border-base-200 shadow-sm p-2 sm:p-3 flex items-center justify-between px-3 sm:px-6">
+    <div className="h-16 bg-base-100/80 backdrop-blur-md sticky top-0 z-40 border-b border-base-200 shadow-sm flex items-center justify-between px-4 sm:px-6">
       <h1
         className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary cursor-pointer hover:opacity-80 transition-opacity"
         onClick={() => navigate("/")}
@@ -103,14 +103,11 @@ const SiteHeader = () => {
           value={selectedTheme}
           onChange={handleThemeChange}
         >
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-          <option value="black">Black</option>
-          <option value="spotify">Spotify</option>
-          <option value="claude">Claude</option>
-          <option value="corporate">Corporate</option>
-          <option value="ghibli">Ghibli</option>
-          <option value="halloween">Halloween</option>
+          {["light", "dark", "black", "spotify", "claude", "corporate", "ghibli", "pastel"].map(theme => (
+            <option key={theme} value={theme}>
+              {theme.charAt(0).toUpperCase() + theme.slice(1)}
+            </option>
+          ))}
         </select>
       </div>
     </div>

@@ -26,7 +26,7 @@ const Chatting = ({ selectedFriend, setSelectedFriend, onlineUsers = {} }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [activeMessageDropdown, setActiveMessageDropdown] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(null);
   const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
   
   const messagesEndRef = useRef(null);
@@ -244,8 +244,8 @@ const Chatting = ({ selectedFriend, setSelectedFriend, onlineUsers = {} }) => {
       if (showEmojiPicker && !event.target.closest('.emoji-picker-react') && !event.target.closest('button')) {
         setShowEmojiPicker(false);
       }
-      if (activeMessageDropdown && !event.target.closest('.message-dropdown')) {
-        setActiveMessageDropdown(null);
+      if (showDeleteModal && !event.target.closest('.delete-modal')) {
+        setShowDeleteModal(null);
       }
       if (isHeaderMenuOpen && !event.target.closest('.header-menu')) {
         setIsHeaderMenuOpen(false);
@@ -253,7 +253,7 @@ const Chatting = ({ selectedFriend, setSelectedFriend, onlineUsers = {} }) => {
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showEmojiPicker, activeMessageDropdown, isHeaderMenuOpen]);
+  }, [showEmojiPicker, showDeleteModal, isHeaderMenuOpen]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -376,7 +376,10 @@ const Chatting = ({ selectedFriend, setSelectedFriend, onlineUsers = {} }) => {
       ) : (
         <>
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+          <div 
+            className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-base-300/50 bg-repeat bg-center"
+            style={{ backgroundImage: "url('https://media.istockphoto.com/id/1403848173/vector/vector-online-chatting-pattern-online-chatting-seamless-background.jpg?s=612x612&w=0&k=20&c=W3O15mtJiNlJuIgU6S9ZlnzM_yCE27eqwTCfXGYwCSo=')", backgroundSize: "300px", backgroundBlendMode: "overlay" }}
+          >
             {filteredChatData.map((chat) => {
               const isMe = chat.senderId === user._id;
               const emojiOnly = chat.messageType === "text" && isEmojiOnly(chat.message);
@@ -393,28 +396,40 @@ const Chatting = ({ selectedFriend, setSelectedFriend, onlineUsers = {} }) => {
                       />
                     </div>
                   </div>
-                  <div className="chat-header text-base-content font-medium mb-1 flex items-center gap-2">
-                    {isMe ? user?.fullName : selectedFriend?.fullName}
-                    <time className="text-xs text-base-content/50 font-normal">
-                      {chat.createdAt ? new Date(chat.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : chat.timestamp}
-                    </time>
-                  </div>
-                  <div className={`chat-bubble relative ${isMe ? 'bg-primary text-primary-content' : 'bg-base-200 text-base-content'} ${emojiOnly ? 'bg-transparent shadow-none text-5xl p-0' : ''}`}>
-                    {renderMessageContent(chat, emojiOnly)}
-                    {isMe && !emojiOnly && (
-                      <button onClick={() => handleDeleteMessage(chat._id, "for_everyone")} className="absolute -left-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-error/10 text-error p-2 rounded-full cursor-pointer border-none outline-none">
-                        <Trash2 size={14} />
-                      </button>
-                    )}
+                  <div 
+                    onDoubleClick={() => setShowDeleteModal(chat._id)}
+                    className={`chat-bubble relative cursor-pointer ${isMe ? 'bg-primary text-primary-content' : 'bg-base-200 text-base-content'} ${emojiOnly ? '!bg-transparent !shadow-none text-5xl p-0' : ''}`}
+                  >
+                    <div className={`flex flex-wrap items-end gap-x-3 gap-y-1 ${emojiOnly ? 'flex-col' : ''}`}>
+                      <div className={emojiOnly ? "mb-2" : "break-words"}>{renderMessageContent(chat, emojiOnly)}</div>
+                      
+                      <div className={`flex items-center gap-1 text-[10px] select-none whitespace-nowrap ml-auto ${emojiOnly ? 'absolute -bottom-3 right-0 bg-base-100/80 backdrop-blur-md rounded-full px-1.5 py-0.5 shadow-sm text-base-content/80' : 'opacity-70'}`}>
+                        <time>
+                          {chat.createdAt ? new Date(chat.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : chat.timestamp}
+                        </time>
+                        {isMe && (
+                          chat.isRead ? <CheckCheck size={14} className={emojiOnly ? "text-primary" : (isMe ? "text-white" : "text-info")} /> : <Check size={14} />
+                        )}
+                      </div>
+                    </div>
                   </div>
                   
-                  {isMe && (
-                    <div className="chat-footer text-base-content/50 text-[10px] mt-1 flex items-center gap-1">
-                      {chat.isRead ? (
-                        <>Seen <span className="icon-[tabler--checks] text-info align-bottom"><CheckCheck size={14} /></span></>
-                      ) : (
-                        <>Delivered <span className="icon-[tabler--check] text-base-content/50 align-bottom"><Check size={14} /></span></>
-                      )}
+                  {showDeleteModal === chat._id && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4">
+                      <div className="delete-modal bg-base-100 p-6 rounded-2xl shadow-xl w-full max-w-sm flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200">
+                        <h3 className="font-semibold text-lg text-base-content mb-2">Delete message?</h3>
+                        {isMe && (
+                          <button onClick={() => { handleDeleteMessage(chat._id, "for_everyone"); setShowDeleteModal(null); }} className="btn btn-error btn-outline w-full rounded-xl">
+                            Delete for everyone
+                          </button>
+                        )}
+                        <button onClick={() => { handleDeleteMessage(chat._id, "for_me"); setShowDeleteModal(null); }} className="btn btn-base-300 w-full rounded-xl">
+                          Delete for me
+                        </button>
+                        <button onClick={() => setShowDeleteModal(null)} className="btn btn-ghost w-full rounded-xl">
+                          Cancel
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

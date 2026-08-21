@@ -219,7 +219,7 @@ const Chat = () => {
                   {/* Themes List (Underscrollbar) */}
                   {isThemeDropdownOpen && (
                     <div className="flex flex-col gap-1 max-h-40 overflow-y-auto custom-scrollbar bg-base-200 p-2 rounded-xl">
-                      {["light", "dark", "black", "spotify", "corporate", "ghibli", "pastel", "retro"].map((theme) => (
+                      {["light", "dark", "black", "spotify", "claude", "corporate", "ghibli", "pastel"].map((theme) => (
                         <button
                           key={theme}
                           onClick={() => {
