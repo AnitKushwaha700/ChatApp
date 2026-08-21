@@ -18,6 +18,12 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    google_id: {
+      type: String,
+    },
+    loginType: {
+      
+    },
     profilePic: {
       type: String,
       default: "",
@@ -26,7 +32,7 @@ const userSchema = new mongoose.Schema(
     pendingRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     sentRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const User = mongoose.model("User", userSchema);
