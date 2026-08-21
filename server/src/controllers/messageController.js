@@ -143,3 +143,20 @@ export const ClearChat = async (req, res, next) => {
     next(error);
   }
 };
+
+export const MarkMessagesAsRead = async (req, res, next) => {
+  try {
+    const { friendId } = req.params;
+    const currentUser = req.user;
+
+    await Message.updateMany(
+      { senderId: friendId, receiverId: currentUser._id, isRead: false },
+      { $set: { isRead: true } }
+    );
+
+    res.status(200).json({ success: true, message: "Messages marked as read" });
+  } catch (error) {
+    console.log(error.message);
+    next(error);
+  }
+};

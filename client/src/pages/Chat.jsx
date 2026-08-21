@@ -79,9 +79,7 @@ const Chat = () => {
 
   if (!isLogin) return null;
 
-  const displayUsers = recentUser.filter(
-    (u) => (u.fullName || "").toLowerCase() !== "john doe"
-  );
+  const displayUsers = recentUser;
 
   return (
     <div className="flex h-screen bg-base-100 overflow-hidden text-base-content">
@@ -113,7 +111,10 @@ const Chat = () => {
           {displayUsers.map((u) => (
             <div
               key={u._id}
-              onClick={() => setSelectedFriend(u)}
+              onClick={() => {
+                setSelectedFriend(u);
+                setRecentUser((prev) => prev.map((userItem) => userItem._id === u._id ? { ...userItem, unreadCount: 0 } : userItem));
+              }}
               className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
                 selectedFriend?._id === u._id ? "bg-base-content/10 shadow-sm" : "hover:bg-base-content/5"
               }`}
@@ -130,6 +131,15 @@ const Chat = () => {
               </div>
               <div className="flex-1 truncate">
                 <h4 className="text-base-content text-sm font-medium truncate">{u.fullName || u.email}</h4>
+              </div>
+              <div className="shrink-0 flex items-center">
+                {user?.pendingRequests?.includes(u._id) ? (
+                  <span className="badge badge-error badge-sm text-[10px] uppercase font-bold px-2 py-2">Request</span>
+                ) : user?.friends?.includes(u._id) && u.unreadCount > 0 ? (
+                  <span className="w-5 h-5 rounded-full bg-primary text-primary-content text-[10px] flex items-center justify-center font-bold shadow-sm">
+                    {u.unreadCount > 99 ? '99+' : u.unreadCount}
+                  </span>
+                ) : null}
               </div>
             </div>
           ))}

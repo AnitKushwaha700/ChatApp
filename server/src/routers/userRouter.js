@@ -1,6 +1,6 @@
 import express from "express";
 import { getAllUsers, updateProfile, getConversations, getMe, sendRequest, acceptRequest, declineRequest } from "../controllers/userController.js";
-import { SendMessage, GetMessages, DeleteMessage, ClearChat } from "../controllers/messageController.js";
+import { SendMessage, GetMessages, DeleteMessage, ClearChat, MarkMessagesAsRead } from "../controllers/messageController.js";
 import { Protect } from "../middleware/authMiddleware.js";
 import { uploadProfilePic, uploadMessageMedia } from "../config/multer.js";
 
@@ -17,6 +17,7 @@ router.post("/decline/:friendId", Protect, declineRequest);
 
 router.post("/send-message", Protect, uploadMessageMedia.single("media"), SendMessage);
 router.get("/get-messages/:friendId", Protect, GetMessages);
+router.put("/mark-read/:friendId", Protect, MarkMessagesAsRead);
 router.delete("/message/:messageId", Protect, DeleteMessage);
 router.delete("/messages/:friendId", Protect, ClearChat);
 

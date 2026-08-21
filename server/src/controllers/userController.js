@@ -18,7 +18,24 @@ export const getAllUsers = async (req, res, next) => {
 
     const users = await User.find(query).select("-password").limit(50);
 
-    res.status(200).json({ data: users });
+    // Get unread message counts
+    const unreadCounts = await Message.aggregate([
+      { $match: { receiverId: currentUser._id, isRead: false } },
+      { $group: { _id: "$senderId", count: { $sum: 1 } } }
+    ]);
+
+    const unreadMap = {};
+    unreadCounts.forEach((item) => {
+      unreadMap[item._id.toString()] = item.count;
+    });
+
+    const usersWithUnreadCount = users.map((u) => {
+      const userObj = u.toObject();
+      userObj.unreadCount = unreadMap[userObj._id.toString()] || 0;
+      return userObj;
+    });
+
+    res.status(200).json({ data: usersWithUnreadCount });
   } catch (error) {
     next(error);
   }

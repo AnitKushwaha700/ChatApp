@@ -65,6 +65,9 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
     try {
       const res = await api.get(`/user/get-messages/${selectedFriend._id}`);
       setFilteredChatData(res.data.data);
+      
+      // Mark messages as read
+      await api.put(`/user/mark-read/${selectedFriend._id}`);
     } catch (error) {
       console.error("Failed to fetch chat data", error);
     }
@@ -201,6 +204,11 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
           if (prev.find(msg => msg._id === newMessage._id)) return prev;
           return [...prev, newMessage];
         });
+
+        // Mark as read if the chat is currently open
+        if (newMessage.senderId === selectedFriend?._id) {
+          api.put(`/user/mark-read/${selectedFriend._id}`).catch(console.error);
+        }
       }
     };
 
@@ -276,6 +284,10 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
     }
   };
 
+  const isFriend = user?.friends?.includes(selectedFriend?._id);
+  const isRequestSent = user?.sentRequests?.includes(selectedFriend?._id);
+  const isRequestReceived = user?.pendingRequests?.includes(selectedFriend?._id);
+
   return (
     <div className="flex flex-col h-full w-full relative">
       {/* Header */}
@@ -319,150 +331,184 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-        {filteredChatData.map((chat) => {
-          const isMe = chat.senderId === user._id;
-          const emojiOnly = chat.messageType === "text" && isEmojiOnly(chat.message);
-          return (
-            <div key={chat._id} className={`flex ${isMe ? "justify-end" : "justify-start"} relative group message-dropdown`}>
-              {isMe && !emojiOnly && (
-                <div className="hidden group-hover:flex items-center mr-2 animate-in fade-in zoom-in duration-200">
-                  <button onClick={() => setActiveMessageDropdown(activeMessageDropdown === chat._id ? null : chat._id)} className="flex items-center justify-center w-7 h-7 rounded-full text-base-content/50 hover:text-error hover:bg-error/10 hover:shadow-sm transition-all duration-200 bg-transparent border-none outline-none cursor-pointer">
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              )}
+      {/* Connection UI or Chat */}
+      {!isFriend ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
+          <div className="w-24 h-24 rounded-full bg-base-200 flex items-center justify-center mb-4">
+            <UserPlus className="w-10 h-10 text-base-content/50" />
+          </div>
+          <h3 className="text-xl font-semibold mb-2">Connect with {selectedFriend?.fullName}</h3>
+          <p className="text-base-content/70 text-sm mb-6 max-w-md">
+            You must be friends to chat. Send a request to start communicating!
+          </p>
+          
+          {isRequestSent ? (
+            <button disabled className="btn btn-primary opacity-50 cursor-not-allowed px-8">
+              Request Sent...
+            </button>
+          ) : isRequestReceived ? (
+            <div className="flex gap-4">
+              <button onClick={handleAcceptRequest} className="btn btn-success text-success-content px-8">
+                Accept
+              </button>
+              <button onClick={handleDeclineRequest} className="btn btn-error text-error-content px-8">
+                Decline
+              </button>
+            </div>
+          ) : (
+            <button onClick={handleSendRequest} className="btn btn-primary px-8">
+              Send Chat Request
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+            {filteredChatData.map((chat) => {
+              const isMe = chat.senderId === user._id;
+              const emojiOnly = chat.messageType === "text" && isEmojiOnly(chat.message);
+              return (
+                <div key={chat._id} className={`flex ${isMe ? "justify-end" : "justify-start"} relative group message-dropdown`}>
+                  {isMe && !emojiOnly && (
+                    <div className="hidden group-hover:flex items-center mr-2 animate-in fade-in zoom-in duration-200">
+                      <button onClick={() => setActiveMessageDropdown(activeMessageDropdown === chat._id ? null : chat._id)} className="flex items-center justify-center w-7 h-7 rounded-full text-base-content/50 hover:text-error hover:bg-error/10 hover:shadow-sm transition-all duration-200 bg-transparent border-none outline-none cursor-pointer">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  )}
 
-              <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl relative ${
-                  emojiOnly ? "bg-transparent shadow-none" : isMe ? "bg-primary text-primary-content rounded-tr-sm shadow-md" : "bg-base-200 text-base-content rounded-tl-sm shadow-md border border-base-content/5"
-                }`}
-              >
-                {activeMessageDropdown === chat._id && (
-                  <div className={`absolute top-full mt-1 ${isMe ? 'right-0' : 'left-0'} bg-base-100 border border-base-content/10 rounded-2xl shadow-xl z-50 w-48 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200`}>
-                    <button onClick={() => handleDeleteMessage(chat._id, "for_me")} className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-base-200 transition-colors text-base-content font-medium border-none outline-none cursor-pointer">
-                      <Trash2 size={16} /> Delete for me
+                  <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl relative ${
+                      emojiOnly ? "bg-transparent shadow-none" : isMe ? "bg-primary text-primary-content rounded-tr-sm shadow-md" : "bg-base-200 text-base-content rounded-tl-sm shadow-md border border-base-content/5"
+                    }`}
+                  >
+                    {activeMessageDropdown === chat._id && (
+                      <div className={`absolute top-full mt-1 ${isMe ? 'right-0' : 'left-0'} bg-base-100 border border-base-content/10 rounded-2xl shadow-xl z-50 w-48 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200`}>
+                        <button onClick={() => handleDeleteMessage(chat._id, "for_me")} className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-base-200 transition-colors text-base-content font-medium border-none outline-none cursor-pointer">
+                          <Trash2 size={16} /> Delete for me
+                        </button>
+                        {isMe && <button onClick={() => handleDeleteMessage(chat._id, "for_everyone")} className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-error/10 transition-colors text-error font-medium border-none outline-none cursor-pointer">
+                          <Trash2 size={16} /> Delete for everyone
+                        </button>}
+                      </div>
+                    )}
+                    {renderMessageContent(chat, emojiOnly)}
+                    <p className={`text-[10px] mt-1 text-right ${emojiOnly ? "text-base-content/50" : isMe ? "text-primary-content/70" : "text-base-content/50"}`}>
+                      {chat.createdAt ? new Date(chat.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : chat.timestamp}
+                    </p>
+                  </div>
+
+                  {!isMe && !emojiOnly && (
+                    <div className="hidden group-hover:flex items-center ml-2 animate-in fade-in zoom-in duration-200">
+                      <button onClick={() => setActiveMessageDropdown(activeMessageDropdown === chat._id ? null : chat._id)} className="flex items-center justify-center w-7 h-7 rounded-full text-base-content/50 hover:text-error hover:bg-error/10 hover:shadow-sm transition-all duration-200 bg-transparent border-none outline-none cursor-pointer">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input */}
+          <div className="p-3 bg-base-100 border-t border-base-content/10">
+            <form onSubmit={(e) => handleMessageSend(e, "text")} className="flex items-center gap-1 sm:gap-2 bg-base-200 rounded-full p-1 sm:p-1.5 border border-base-content/10 shadow-sm relative">
+              
+              {/* Attachment Menu */}
+              <div className="relative" ref={attachmentRef}>
+                <button 
+                  type="button" 
+                  onClick={() => setIsAttachmentOpen(!isAttachmentOpen)}
+                  className="p-2.5 bg-base-content/10 rounded-full text-base-content/70 hover:text-base-content transition-colors cursor-pointer border-none outline-none"
+                >
+                  <Plus size={20} className={`transition-transform duration-300 ${isAttachmentOpen ? "rotate-45" : ""}`} />
+                </button>
+
+                {isAttachmentOpen && (
+                  <div className="absolute bottom-14 left-0 bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-3 flex flex-col gap-3 w-48 z-50">
+                    <button type="button" onClick={() => { fileInputRef.current.accept="*/*"; fileInputRef.current.click(); }} className="flex items-center gap-3 hover:bg-base-200 p-2 rounded-lg transition-colors text-left text-sm text-base-content/80">
+                      <div className="bg-indigo-500/10 text-indigo-500 p-2 rounded-full"><FileText size={16} /></div> Document
                     </button>
-                    {isMe && <button onClick={() => handleDeleteMessage(chat._id, "for_everyone")} className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-error/10 transition-colors text-error font-medium border-none outline-none cursor-pointer">
-                      <Trash2 size={16} /> Delete for everyone
-                    </button>}
+                    <button type="button" onClick={() => { fileInputRef.current.accept="image/*,video/*"; fileInputRef.current.click(); }} className="flex items-center gap-3 hover:bg-base-200 p-2 rounded-lg transition-colors text-left text-sm text-base-content/80">
+                      <div className="bg-pink-500/10 text-pink-500 p-2 rounded-full"><ImageIcon size={16} /></div> Photo & Video
+                    </button>
+                    <button type="button" className="flex items-center gap-3 hover:bg-base-200 p-2 rounded-lg transition-colors text-left text-sm text-base-content/80 opacity-50 cursor-not-allowed">
+                      <div className="bg-red-500/10 text-red-500 p-2 rounded-full"><Camera size={16} /></div> Camera
+                    </button>
+                    <button type="button" onClick={() => { fileInputRef.current.accept="audio/*"; fileInputRef.current.click(); }} className="flex items-center gap-3 hover:bg-base-200 p-2 rounded-lg transition-colors text-left text-sm text-base-content/80">
+                      <div className="bg-orange-500/10 text-orange-500 p-2 rounded-full"><Music size={16} /></div> Audio
+                    </button>
+                    <button type="button" className="flex items-center gap-3 hover:bg-base-200 p-2 rounded-lg transition-colors text-left text-sm text-base-content/80 opacity-50 cursor-not-allowed">
+                      <div className="bg-green-500/10 text-green-500 p-2 rounded-full"><UserPlus size={16} /></div> Contact
+                    </button>
                   </div>
                 )}
-                {renderMessageContent(chat, emojiOnly)}
-                <p className={`text-[10px] mt-1 text-right ${emojiOnly ? "text-base-content/50" : isMe ? "text-primary-content/70" : "text-base-content/50"}`}>
-                  {chat.createdAt ? new Date(chat.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : chat.timestamp}
-                </p>
+                
+                <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
               </div>
 
-              {!isMe && !emojiOnly && (
-                <div className="hidden group-hover:flex items-center ml-2 animate-in fade-in zoom-in duration-200">
-                  <button onClick={() => setActiveMessageDropdown(activeMessageDropdown === chat._id ? null : chat._id)} className="flex items-center justify-center w-7 h-7 rounded-full text-base-content/50 hover:text-error hover:bg-error/10 hover:shadow-sm transition-all duration-200 bg-transparent border-none outline-none cursor-pointer">
-                    <Trash2 size={15} />
-                  </button>
+              <div className="relative">
+                <button 
+                  type="button" 
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  className="p-2 text-base-content/70 hover:text-base-content transition-colors"
+                >
+                  <Smile size={20} />
+                </button>
+                {showEmojiPicker && (
+                  <div className="absolute bottom-12 left-0 z-50 shadow-2xl">
+                    <EmojiPicker 
+                      onEmojiClick={(emojiData) => setMessage((prev) => prev + emojiData.emoji)}
+                      theme={localStorage.getItem("theme") === "dark" || localStorage.getItem("theme") === "black" ? "dark" : "light"}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {isRecording ? (
+                <div className="flex-1 flex items-center gap-3 px-3 text-error animate-pulse">
+                  <div className="w-2.5 h-2.5 rounded-full bg-error"></div>
+                  <span className="text-sm font-medium">Recording... {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}</span>
                 </div>
-              )}
-            </div>
-          );
-        })}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input */}
-      <div className="p-3 bg-base-100 border-t border-base-content/10">
-        <form onSubmit={(e) => handleMessageSend(e, "text")} className="flex items-center gap-1 sm:gap-2 bg-base-200 rounded-full p-1 sm:p-1.5 border border-base-content/10 shadow-sm relative">
-          
-          {/* Attachment Menu */}
-          <div className="relative" ref={attachmentRef}>
-            <button 
-              type="button" 
-              onClick={() => setIsAttachmentOpen(!isAttachmentOpen)}
-              className="p-2.5 bg-base-content/10 rounded-full text-base-content/70 hover:text-base-content transition-colors cursor-pointer border-none outline-none"
-            >
-              <Plus size={20} className={`transition-transform duration-300 ${isAttachmentOpen ? "rotate-45" : ""}`} />
-            </button>
-
-            {isAttachmentOpen && (
-              <div className="absolute bottom-14 left-0 bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-3 flex flex-col gap-3 w-48 z-50">
-                <button type="button" onClick={() => { fileInputRef.current.accept="*/*"; fileInputRef.current.click(); }} className="flex items-center gap-3 hover:bg-base-200 p-2 rounded-lg transition-colors text-left text-sm text-base-content/80">
-                  <div className="bg-indigo-500/10 text-indigo-500 p-2 rounded-full"><FileText size={16} /></div> Document
-                </button>
-                <button type="button" onClick={() => { fileInputRef.current.accept="image/*,video/*"; fileInputRef.current.click(); }} className="flex items-center gap-3 hover:bg-base-200 p-2 rounded-lg transition-colors text-left text-sm text-base-content/80">
-                  <div className="bg-pink-500/10 text-pink-500 p-2 rounded-full"><ImageIcon size={16} /></div> Photo & Video
-                </button>
-                <button type="button" className="flex items-center gap-3 hover:bg-base-200 p-2 rounded-lg transition-colors text-left text-sm text-base-content/80 opacity-50 cursor-not-allowed">
-                  <div className="bg-red-500/10 text-red-500 p-2 rounded-full"><Camera size={16} /></div> Camera
-                </button>
-                <button type="button" onClick={() => { fileInputRef.current.accept="audio/*"; fileInputRef.current.click(); }} className="flex items-center gap-3 hover:bg-base-200 p-2 rounded-lg transition-colors text-left text-sm text-base-content/80">
-                  <div className="bg-orange-500/10 text-orange-500 p-2 rounded-full"><Music size={16} /></div> Audio
-                </button>
-                <button type="button" className="flex items-center gap-3 hover:bg-base-200 p-2 rounded-lg transition-colors text-left text-sm text-base-content/80 opacity-50 cursor-not-allowed">
-                  <div className="bg-green-500/10 text-green-500 p-2 rounded-full"><UserPlus size={16} /></div> Contact
-                </button>
-              </div>
-            )}
-            
-            <input type="file" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
-          </div>
-
-          <div className="relative">
-            <button 
-              type="button" 
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="p-2 text-base-content/70 hover:text-base-content transition-colors"
-            >
-              <Smile size={20} />
-            </button>
-            {showEmojiPicker && (
-              <div className="absolute bottom-12 left-0 z-50 shadow-2xl">
-                <EmojiPicker 
-                  onEmojiClick={(emojiData) => setMessage((prev) => prev + emojiData.emoji)}
-                  theme={localStorage.getItem("theme") === "dark" || localStorage.getItem("theme") === "black" ? "dark" : "light"}
+              ) : (
+                <input
+                  type="text"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Type your message..."
+                  className="flex-1 bg-transparent text-base-content outline-none px-3 text-sm placeholder:text-base-content/50"
                 />
-              </div>
-            )}
+              )}
+
+              {isRecording ? (
+                <button
+                  type="button"
+                  onClick={stopRecording}
+                  className="p-2.5 bg-error text-error-content rounded-full hover:brightness-110 transition-colors flex items-center justify-center mr-1 shadow-md shadow-error/20"
+                >
+                  <StopCircle size={18} />
+                </button>
+              ) : message.trim() ? (
+                <button
+                  type="submit"
+                  className="p-2.5 bg-primary text-primary-content rounded-full hover:brightness-110 transition-colors flex items-center justify-center mr-1 shadow-md shadow-primary/20"
+                >
+                  <Send size={18} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={startRecording}
+                  className="p-2.5 bg-success text-success-content rounded-full hover:brightness-110 transition-colors flex items-center justify-center mr-1 shadow-md shadow-success/20"
+                >
+                  <Mic size={18} />
+                </button>
+              )}
+            </form>
           </div>
-
-          {isRecording ? (
-            <div className="flex-1 flex items-center gap-3 px-3 text-error animate-pulse">
-              <div className="w-2.5 h-2.5 rounded-full bg-error"></div>
-              <span className="text-sm font-medium">Recording... {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}</span>
-            </div>
-          ) : (
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type your message..."
-              className="flex-1 bg-transparent text-base-content outline-none px-3 text-sm placeholder:text-base-content/50"
-            />
-          )}
-
-          {isRecording ? (
-            <button
-              type="button"
-              onClick={stopRecording}
-              className="p-2.5 bg-error text-error-content rounded-full hover:brightness-110 transition-colors flex items-center justify-center mr-1 shadow-md shadow-error/20"
-            >
-              <StopCircle size={18} />
-            </button>
-          ) : message.trim() ? (
-            <button
-              type="submit"
-              className="p-2.5 bg-primary text-primary-content rounded-full hover:brightness-110 transition-colors flex items-center justify-center mr-1 shadow-md shadow-primary/20"
-            >
-              <Send size={18} />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={startRecording}
-              className="p-2.5 bg-success text-success-content rounded-full hover:brightness-110 transition-colors flex items-center justify-center mr-1 shadow-md shadow-success/20"
-            >
-              <Mic size={18} />
-            </button>
-          )}
-        </form>
-      </div>
+        </>
+      )}
     </div>
   );
 };
