@@ -14,7 +14,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
   });
   const [profilePic, setProfilePic] = useState(null);
   const [previewPic, setPreviewPic] = useState(
-    user?.profilePic ? `${api.defaults.baseURL}${user.profilePic}` : null
+    user?.profilePic ? (user.profilePic.startsWith("http") ? user.profilePic : `${api.defaults.baseURL}${user.profilePic}`) : null
   );
   const [loading, setLoading] = useState(false);
   const fileInputRef = useRef(null);

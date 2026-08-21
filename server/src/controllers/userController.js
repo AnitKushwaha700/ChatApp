@@ -1,5 +1,6 @@
 import User from "../models/userModel.js";
 import Message from "../models/messageModel.js";
+import { OnlineUsers, getIo } from "../config/webSocket.js";
 
 export const getAllUsers = async (req, res, next) => {
   try {
@@ -49,7 +50,7 @@ export const updateProfile = async (req, res, next) => {
     let profilePicUrl = undefined;
 
     if (req.file) {
-      profilePicUrl = `/public/uploads/profile_pics/${req.file.filename}`;
+      profilePicUrl = req.file.path;
     }
 
     if (email) {
@@ -190,6 +191,20 @@ export const declineRequest = async (req, res, next) => {
     await User.findByIdAndUpdate(friendId, {
       $pull: { sentRequests: currentUser._id }
     });
+
+    // Create automated decline message
+    const newMessage = await Message.create({
+      senderId: currentUser._id,
+      receiverId: friendId,
+      message: `${currentUser.fullName || currentUser.email} has declined your chat request.`,
+      messageType: "text",
+    });
+
+    const io = getIo();
+    const receiverSocketId = OnlineUsers[friendId];
+    if (io && receiverSocketId) {
+      io.to(receiverSocketId).emit("newMessage", newMessage);
+    }
 
     const updatedUser = await User.findById(currentUser._id).select("-password");
     res.status(200).json({ message: "Request declined", data: updatedUser });

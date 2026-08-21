@@ -1,37 +1,30 @@
 import multer from "multer";
-import path from "path";
-import fs from "fs";
+import { v2 as cloudinary } from "cloudinary";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+import dotenv from "dotenv";
 
-// Ensure directories exist
-const profilePicsDir = path.join(process.cwd(), "public", "uploads", "profile_pics");
-const messagesDir = path.join(process.cwd(), "public", "uploads", "messages");
+dotenv.config();
 
-[profilePicsDir, messagesDir].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Profile Pic Storage
-const profilePicStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, profilePicsDir);
+const profilePicStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: "chat_app/profiles",
+    allowed_formats: ["jpg", "jpeg", "png", "webp"],
   },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'dp-' + uniqueSuffix + path.extname(file.originalname));
-  }
 });
 
-// Messages Media Storage
-const messageMediaStorage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, messagesDir);
+const messageMediaStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: "chat_app/messages",
+    resource_type: "auto", // Allows audio, video, raw documents
   },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'media-' + uniqueSuffix + path.extname(file.originalname));
-  }
 });
 
 export const uploadProfilePic = multer({ storage: profilePicStorage });

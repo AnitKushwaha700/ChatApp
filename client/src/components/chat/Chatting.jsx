@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import api from "../../config/api";
 import socketAPI from "../../config/webSocket";
 import { useAuth } from "../../context/AuthContext";
-import { X, Image as ImageIcon, Send, Plus, Mic, FileText, Camera, Music, UserPlus, StopCircle, Smile, ArrowLeft, Trash2, MoreVertical } from "lucide-react";
+import { X, Image as ImageIcon, Send, Plus, Mic, FileText, Camera, Music, UserPlus, StopCircle, Smile, ArrowLeft, Trash2, MoreVertical, Check, CheckCheck } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import { motion } from "motion/react";
 
@@ -13,7 +13,12 @@ const isEmojiOnly = (text) => {
   return /^[\p{Emoji_Presentation}\p{Extended_Pictographic}]+$/u.test(noSpace);
 };
 
-const Chatting = ({ selectedFriend, setSelectedFriend }) => {
+const getMediaUrl = (url) => {
+  if (!url) return "";
+  return url.startsWith("http") ? url : `${api.defaults.baseURL}${url}`;
+};
+
+const Chatting = ({ selectedFriend, setSelectedFriend, onlineUsers = {} }) => {
   const { user, setUser } = useAuth();
   const [filteredChatData, setFilteredChatData] = useState([]);
   const [message, setMessage] = useState("");
@@ -270,14 +275,14 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
       }
       return <p className="text-sm leading-relaxed">{chat.message}</p>;
     } else if (chat.messageType === "image" && chat.mediaUrl) {
-      return <img src={`${api.defaults.baseURL}${chat.mediaUrl}`} alt="Attachment" className="max-w-[250px] rounded-lg mt-1 object-cover" />;
+      return <img src={getMediaUrl(chat.mediaUrl)} alt="Attachment" className="max-w-[250px] rounded-lg mt-1 object-cover" />;
     } else if (chat.messageType === "audio" && chat.mediaUrl) {
-      return <audio controls src={`${api.defaults.baseURL}${chat.mediaUrl}`} className="w-[200px] h-10 mt-1 outline-none" />;
+      return <audio controls src={getMediaUrl(chat.mediaUrl)} className="w-[200px] h-10 mt-1 outline-none" />;
     } else if (chat.messageType === "video" && chat.mediaUrl) {
-      return <video controls src={`${api.defaults.baseURL}${chat.mediaUrl}`} className="max-w-[250px] rounded-lg mt-1" />;
+      return <video controls src={getMediaUrl(chat.mediaUrl)} className="max-w-[250px] rounded-lg mt-1" />;
     } else {
       return (
-        <a href={`${api.defaults.baseURL}${chat.mediaUrl}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm bg-base-100/20 p-3 rounded-lg">
+        <a href={getMediaUrl(chat.mediaUrl)} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-sm bg-base-100/20 p-3 rounded-lg">
           <FileText size={20} /> <span className="underline">View Document</span>
         </a>
       );
@@ -302,7 +307,7 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
           <div className="relative">
             <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-base-100">
               {selectedFriend?.profilePic ? (
-                  <img src={`${api.defaults.baseURL}${selectedFriend.profilePic}`} alt="Profile" className="w-full h-full object-cover" />
+                  <img src={getMediaUrl(selectedFriend.profilePic)} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
                   selectedFriend?.fullName?.charAt(0).toUpperCase() || selectedFriend?.email?.charAt(0).toUpperCase()
                 )}
@@ -311,7 +316,7 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
           </div>
           <div>
             <h3 className="font-semibold text-sm">{selectedFriend?.fullName || selectedFriend?.email}</h3>
-            <p className="text-xs text-base-content/70">Online</p>
+            <p className="text-xs text-base-content/70">{onlineUsers[selectedFriend?._id] ? "Online" : "Offline"}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 relative header-menu">
@@ -338,9 +343,16 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
             <UserPlus className="w-10 h-10 text-base-content/50" />
           </div>
           <h3 className="text-xl font-semibold mb-2">Connect with {selectedFriend?.fullName}</h3>
-          <p className="text-base-content/70 text-sm mb-6 max-w-md">
-            You must be friends to chat. Send a request to start communicating!
-          </p>
+          
+          {filteredChatData.length > 0 && filteredChatData[filteredChatData.length - 1].message.includes("declined") ? (
+            <p className="text-error font-medium text-sm mb-6 max-w-md px-4 py-2 bg-error/10 rounded-lg">
+              {filteredChatData[filteredChatData.length - 1].message}
+            </p>
+          ) : (
+            <p className="text-base-content/70 text-sm mb-6 max-w-md">
+              You must be friends to chat. Send a request to start communicating!
+            </p>
+          )}
           
           {isRequestSent ? (
             <button disabled className="btn btn-primary opacity-50 cursor-not-allowed px-8">
@@ -369,40 +381,40 @@ const Chatting = ({ selectedFriend, setSelectedFriend }) => {
               const isMe = chat.senderId === user._id;
               const emojiOnly = chat.messageType === "text" && isEmojiOnly(chat.message);
               return (
-                <div key={chat._id} className={`flex ${isMe ? "justify-end" : "justify-start"} relative group message-dropdown`}>
-                  {isMe && !emojiOnly && (
-                    <div className="hidden group-hover:flex items-center mr-2 animate-in fade-in zoom-in duration-200">
-                      <button onClick={() => setActiveMessageDropdown(activeMessageDropdown === chat._id ? null : chat._id)} className="flex items-center justify-center w-7 h-7 rounded-full text-base-content/50 hover:text-error hover:bg-error/10 hover:shadow-sm transition-all duration-200 bg-transparent border-none outline-none cursor-pointer">
-                        <Trash2 size={15} />
-                      </button>
+                <div key={chat._id} className={`chat ${isMe ? 'chat-sender' : 'chat-receiver'} group relative`}>
+                  <div className="chat-avatar avatar">
+                    <div className="w-10 h-10 rounded-full border border-base-content/10">
+                      <img 
+                        src={isMe 
+                          ? (user?.profilePic ? getMediaUrl(user.profilePic) : `https://ui-avatars.com/api/?name=${user?.fullName}`)
+                          : (selectedFriend?.profilePic ? getMediaUrl(selectedFriend.profilePic) : `https://ui-avatars.com/api/?name=${selectedFriend?.fullName}`)
+                        } 
+                        alt="avatar" 
+                      />
                     </div>
-                  )}
-
-                  <div className={`max-w-[75%] px-4 py-2.5 rounded-2xl relative ${
-                      emojiOnly ? "bg-transparent shadow-none" : isMe ? "bg-primary text-primary-content rounded-tr-sm shadow-md" : "bg-base-200 text-base-content rounded-tl-sm shadow-md border border-base-content/5"
-                    }`}
-                  >
-                    {activeMessageDropdown === chat._id && (
-                      <div className={`absolute top-full mt-1 ${isMe ? 'right-0' : 'left-0'} bg-base-100 border border-base-content/10 rounded-2xl shadow-xl z-50 w-48 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200`}>
-                        <button onClick={() => handleDeleteMessage(chat._id, "for_me")} className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-base-200 transition-colors text-base-content font-medium border-none outline-none cursor-pointer">
-                          <Trash2 size={16} /> Delete for me
-                        </button>
-                        {isMe && <button onClick={() => handleDeleteMessage(chat._id, "for_everyone")} className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-error/10 transition-colors text-error font-medium border-none outline-none cursor-pointer">
-                          <Trash2 size={16} /> Delete for everyone
-                        </button>}
-                      </div>
-                    )}
-                    {renderMessageContent(chat, emojiOnly)}
-                    <p className={`text-[10px] mt-1 text-right ${emojiOnly ? "text-base-content/50" : isMe ? "text-primary-content/70" : "text-base-content/50"}`}>
-                      {chat.createdAt ? new Date(chat.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : chat.timestamp}
-                    </p>
                   </div>
-
-                  {!isMe && !emojiOnly && (
-                    <div className="hidden group-hover:flex items-center ml-2 animate-in fade-in zoom-in duration-200">
-                      <button onClick={() => setActiveMessageDropdown(activeMessageDropdown === chat._id ? null : chat._id)} className="flex items-center justify-center w-7 h-7 rounded-full text-base-content/50 hover:text-error hover:bg-error/10 hover:shadow-sm transition-all duration-200 bg-transparent border-none outline-none cursor-pointer">
-                        <Trash2 size={15} />
+                  <div className="chat-header text-base-content font-medium mb-1 flex items-center gap-2">
+                    {isMe ? user?.fullName : selectedFriend?.fullName}
+                    <time className="text-xs text-base-content/50 font-normal">
+                      {chat.createdAt ? new Date(chat.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : chat.timestamp}
+                    </time>
+                  </div>
+                  <div className={`chat-bubble relative ${isMe ? 'bg-primary text-primary-content' : 'bg-base-200 text-base-content'} ${emojiOnly ? 'bg-transparent shadow-none text-5xl p-0' : ''}`}>
+                    {renderMessageContent(chat, emojiOnly)}
+                    {isMe && !emojiOnly && (
+                      <button onClick={() => handleDeleteMessage(chat._id, "for_everyone")} className="absolute -left-10 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-error/10 text-error p-2 rounded-full cursor-pointer border-none outline-none">
+                        <Trash2 size={14} />
                       </button>
+                    )}
+                  </div>
+                  
+                  {isMe && (
+                    <div className="chat-footer text-base-content/50 text-[10px] mt-1 flex items-center gap-1">
+                      {chat.isRead ? (
+                        <>Seen <span className="icon-[tabler--checks] text-info align-bottom"><CheckCheck size={14} /></span></>
+                      ) : (
+                        <>Delivered <span className="icon-[tabler--check] text-base-content/50 align-bottom"><Check size={14} /></span></>
+                      )}
                     </div>
                   )}
                 </div>

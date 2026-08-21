@@ -8,7 +8,7 @@ export const SendMessage = async (req, res, next) => {
 
     let mediaUrl = undefined;
     if (req.file) {
-      mediaUrl = `/public/uploads/messages/${req.file.filename}`;
+      mediaUrl = req.file.path;
     }
 
     console.log("Receiver ID:", receiverID);

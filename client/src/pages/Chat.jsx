@@ -7,6 +7,11 @@ import api from "../config/api";
 import socketAPI from "../config/webSocket";
 import { LogOut, Settings, Search, Edit3, Palette } from "lucide-react";
 
+const getMediaUrl = (url) => {
+  if (!url) return "";
+  return url.startsWith("http") ? url : `${api.defaults.baseURL}${url}`;
+};
+
 const Chat = () => {
   const navigate = useNavigate();
   const { user, isLogin, setUser, setIsLogin } = useAuth();
@@ -16,6 +21,7 @@ const Chat = () => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState({});
   const settingsRef = React.useRef(null);
 
   const fetchRecentUsers = async (query = "") => {
@@ -77,6 +83,16 @@ const Chat = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    const handleOnlineUsers = (users) => {
+      setOnlineUsers(users);
+    };
+    socketAPI.on("onlineUsers", handleOnlineUsers);
+    return () => {
+      socketAPI.off("onlineUsers", handleOnlineUsers);
+    };
+  }, []);
+
   if (!isLogin) return null;
 
   const displayUsers = recentUser;
@@ -122,7 +138,7 @@ const Chat = () => {
               <div className="relative shrink-0">
                 <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold overflow-hidden border-2 border-base-100">
                   {u.profilePic ? (
-                    <img src={`${api.defaults.baseURL}${u.profilePic}`} alt="Profile" className="w-full h-full object-cover" />
+                    <img src={getMediaUrl(u.profilePic)} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
                     u.fullName?.charAt(0).toUpperCase() || u.email?.charAt(0).toUpperCase()
                   )}
@@ -156,7 +172,7 @@ const Chat = () => {
             <div className="relative">
               <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-lg shadow-sm overflow-hidden border-2 border-base-100">
                 {user?.profilePic ? (
-                  <img src={`${api.defaults.baseURL}${user.profilePic}`} alt="Profile" className="w-full h-full object-cover" />
+                  <img src={getMediaUrl(user.profilePic)} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
                   user?.fullName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()
                 )}
@@ -243,6 +259,7 @@ const Chat = () => {
           <Chatting
             selectedFriend={selectedFriend}
             setSelectedFriend={setSelectedFriend}
+            onlineUsers={onlineUsers}
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-base-content/50 gap-4">
