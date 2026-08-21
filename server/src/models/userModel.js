@@ -16,13 +16,17 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
+      required: function() {
+        return this.loginType === "local";
+      },
     },
     google_id: {
       type: String,
     },
     loginType: {
-      
+      type: String,
+      enum: ["local", "google"],
+      default: "local",
     },
     profilePic: {
       type: String,
@@ -31,6 +35,12 @@ const userSchema = new mongoose.Schema(
     friends: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     pendingRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     sentRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    resetPasswordOTP: {
+      type: String,
+    },
+    resetPasswordExpires: {
+      type: Date,
+    },
   },
   { timestamps: true },
 );
