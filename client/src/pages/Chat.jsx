@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Chatting from "../components/chat/Chatting";
 import ProfileModal from "../components/ProfileModal";
+import CallModal from "../components/chat/CallModal";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import api from "../config/api";
@@ -19,10 +20,11 @@ const Chat = () => {
   const [selectedFriend, setSelectedFriend] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState({});
-  const settingsRef = React.useRef(null);
+  const [isCalling, setIsCalling] = useState(false);
+  const [incomingCall, setIncomingCall] = useState(false);
+  const [callData, setCallData] = useState(null);
 
   const fetchRecentUsers = async (query = "") => {
     try {
@@ -61,6 +63,7 @@ const Chat = () => {
     setUser(null);
     sessionStorage.removeItem("AppUser");
     setIsLogin(false);
+    setIsLogoutModalOpen(false);
     navigate("/");
   };
 
@@ -73,14 +76,7 @@ const Chat = () => {
   }, [searchQuery, isLogin]);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (settingsRef.current && !settingsRef.current.contains(event.target)) {
-        setIsSettingsOpen(false);
-        setIsThemeDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    // No click outside needed here anymore as we removed settings dropdown
   }, []);
 
   useEffect(() => {
@@ -92,6 +88,29 @@ const Chat = () => {
       socketAPI.off("onlineUsers", handleOnlineUsers);
     };
   }, []);
+
+  useEffect(() => {
+    const handleIncomingCall = (data) => {
+      setIncomingCall(true);
+      setCallData({
+        from: data.from,
+        name: data.name || "User",
+        offer: data.offer,
+        isVideo: data.isVideo,
+      });
+    };
+    socketAPI.on("callUser", handleIncomingCall);
+    return () => socketAPI.off("callUser", handleIncomingCall);
+  }, []);
+
+  const initiateCall = (friend, isVideo) => {
+    setIsCalling(true);
+    setCallData({
+      to: friend._id,
+      name: friend.fullName || friend.email,
+      isVideo,
+    });
+  };
 
   if (!isLogin) return null;
 
@@ -143,7 +162,9 @@ const Chat = () => {
                     u.fullName?.charAt(0).toUpperCase() || u.email?.charAt(0).toUpperCase()
                   )}
                 </div>
-                <div className="absolute top-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-base-200"></div>
+                {onlineUsers[u._id] && (
+                  <div className="absolute top-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-base-200"></div>
+                )}
               </div>
               <div className="flex-1 truncate">
                 <h4 className="text-base-content text-sm font-medium truncate">{u.fullName || u.email}</h4>
@@ -185,70 +206,32 @@ const Chat = () => {
             </div>
           </div>
           <div className="flex gap-3 text-base-content/70 items-center">
-            <div className="relative z-50" ref={settingsRef}>
-              <button 
-                onClick={() => setIsSettingsOpen(!isSettingsOpen)} 
-                className="cursor-pointer hover:text-base-content transition-colors flex items-center h-full bg-transparent border-none p-0 outline-none"
-              >
-                <Settings size={18} />
-              </button>
-              
-              {isSettingsOpen && (
-                <div className="absolute bottom-10 right-0 p-3 shadow-xl bg-base-100 rounded-box w-64 border border-base-content/10 mb-2 flex flex-col gap-3">
-                  {/* Grid for Icons */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => {
-                        setIsProfileModalOpen(true);
-                        setIsSettingsOpen(false);
-                      }}
-                      className="flex flex-col items-center justify-center gap-1 p-3 rounded-xl bg-base-200 hover:bg-primary hover:text-primary-content transition-all border-none outline-none cursor-pointer"
-                    >
-                      <Edit3 size={20} />
-                      <span className="text-[10px] font-medium uppercase tracking-wider">Edit</span>
-                    </button>
-                    <button
-                      onClick={() => setIsThemeDropdownOpen(!isThemeDropdownOpen)}
-                      className={`flex flex-col items-center justify-center gap-1 p-3 rounded-xl transition-all border-none outline-none cursor-pointer ${isThemeDropdownOpen ? 'bg-primary text-primary-content' : 'bg-base-200 hover:bg-base-content/10'}`}
-                    >
-                      <Palette size={20} />
-                      <span className="text-[10px] font-medium uppercase tracking-wider">Themes</span>
-                    </button>
-                  </div>
-
-                  {/* Themes List (Underscrollbar) */}
-                  {isThemeDropdownOpen && (
-                    <div className="flex flex-col gap-1 max-h-40 overflow-y-auto custom-scrollbar bg-base-200 p-2 rounded-xl">
-                      {["light", "dark", "black", "spotify", "claude", "corporate", "ghibli", "pastel"].map((theme) => (
-                        <button
-                          key={theme}
-                          onClick={() => {
-                            document.documentElement.setAttribute("data-theme", theme);
-                            localStorage.setItem("theme", theme);
-                            localStorage.setItem("mingoTheme", theme);
-                            setIsSettingsOpen(false);
-                            setIsThemeDropdownOpen(false);
-                          }}
-                          className={`text-left px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer border-none outline-none ${
-                            localStorage.getItem("theme") === theme
-                              ? "bg-primary/20 text-primary font-medium"
-                              : "hover:bg-base-content/10 text-base-content/80 hover:text-base-content"
-                          }`}
-                        >
-                          {theme.charAt(0).toUpperCase() + theme.slice(1)}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-            <button onClick={handleLogout} className="cursor-pointer hover:text-error transition-colors bg-transparent border-none p-0 outline-none">
+            <button 
+              onClick={() => setIsProfileModalOpen(true)} 
+              className="cursor-pointer hover:text-base-content transition-colors flex items-center h-full bg-transparent border-none p-0 outline-none"
+            >
+              <Edit3 size={18} />
+            </button>
+            <button onClick={() => setIsLogoutModalOpen(true)} className="cursor-pointer hover:text-error transition-colors bg-transparent border-none p-0 outline-none">
               <LogOut size={18} />
             </button>
           </div>
         </div>
       </div>
+
+      {/* Logout Modal */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-base-100 p-6 rounded-2xl shadow-xl w-full max-w-sm flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="font-semibold text-lg text-base-content mb-2">Confirm Logout</h3>
+            <p className="text-base-content/70 text-sm">Are you sure you want to logout?</p>
+            <div className="flex gap-3 mt-4">
+              <button onClick={() => setIsLogoutModalOpen(false)} className="btn btn-ghost flex-1 rounded-xl">Cancel</button>
+              <button onClick={handleLogout} className="btn btn-error flex-1 rounded-xl">Logout</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Profile Modal */}
       <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
@@ -260,6 +243,7 @@ const Chat = () => {
             selectedFriend={selectedFriend}
             setSelectedFriend={setSelectedFriend}
             onlineUsers={onlineUsers}
+            initiateCall={initiateCall}
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-base-content/50 gap-4">
@@ -270,6 +254,26 @@ const Chat = () => {
           </div>
         )}
       </div>
+
+      {/* Call Modal */}
+      <CallModal
+        isCalling={isCalling}
+        incomingCall={incomingCall}
+        callData={callData}
+        onEndCall={() => {
+          setIsCalling(false);
+          setIncomingCall(false);
+          setCallData(null);
+        }}
+        onAcceptCall={() => {
+          setIncomingCall(false);
+          setIsCalling(true); // transitions to active
+        }}
+        onRejectCall={() => {
+          setIncomingCall(false);
+          setCallData(null);
+        }}
+      />
     </div>
   );
 };

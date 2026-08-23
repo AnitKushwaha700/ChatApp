@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro", "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
 @plugin "flyonui" {
   themes: all;
 }
@@ -81,4 +85,43 @@
     --b2: 210 20% 98%;
     --b3: 210 20% 95%;
     --bc: 213 20% 20%;
+}
+
+.chat-background {
+    position: relative;
+    z-index: 1;
+}
+
+.chat-background::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #efe6dd;
+    background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+    background-size: 300px;
+    background-repeat: repeat;
+    background-position: center;
+    opacity: 0.5;
+    z-index: -1;
+}
+
+/* Dark themes */
+[data-theme='dark'] .chat-background::before,
+[data-theme='black'] .chat-background::before,
+[data-theme='spotify'] .chat-background::before,
+[data-theme='halloween'] .chat-background::before {
+    background-color: #0b141a;
+    filter: invert(1);
+    opacity: 0.05;
+}
+
+/* Light themes */
+[data-theme='light'] .chat-background::before,
+[data-theme='corporate'] .chat-background::before,
+[data-theme='pastel'] .chat-background::before,
+[data-theme='claude'] .chat-background::before,
+[data-theme='ghibli'] .chat-background::before {
+    background-color: #efe6dd;
+    filter: invert(0);
+    opacity: 0.5;
 }
