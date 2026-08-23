@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
-import api from "../../config/api";
-import socketAPI from "../../config/webSocket";
-import { useAuth } from "../../context/AuthContext";
+import api from "../../lib/api";
+import socketAPI from "../../lib/webSocket";
+import { useAuth } from "../auth/AuthContext";
 import {
   X,
   Image as ImageIcon,
@@ -30,6 +30,41 @@ const isEmojiOnly = (text) => {
   const noSpace = text.replace(/[\s\n]/g, "");
   if (noSpace.length === 0) return false;
   return /^[\p{Emoji_Presentation}\p{Extended_Pictographic}]+$/u.test(noSpace);
+};
+
+const playMessageSound = (type = 'incoming') => {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    
+    if (type === 'outgoing') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(400, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.1);
+      gainNode.gain.setValueAtTime(0, ctx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.1);
+    } else {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.setValueAtTime(800, ctx.currentTime + 0.1);
+      gainNode.gain.setValueAtTime(0, ctx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.2);
+    }
+  } catch (e) {
+    console.error("Audio playback failed", e);
+  }
 };
 
 const getMediaUrl = (url) => {
@@ -165,6 +200,7 @@ const Chatting = ({
         });
         setFilteredChatData((prev) => [...prev, res.data.data]);
       }
+      playMessageSound('outgoing');
 
       setIsAttachmentOpen(false);
       setShowEmojiPicker(false);
@@ -245,6 +281,9 @@ const Chatting = ({
         setFilteredChatData((prev) => {
           // Check if message already exists to avoid duplicates
           if (prev.find((msg) => msg._id === newMessage._id)) return prev;
+          if (newMessage.senderId !== user._id) {
+            playMessageSound('incoming');
+          }
           return [...prev, newMessage];
         });
 
@@ -609,7 +648,8 @@ const Chatting = ({
       ) : (
         <>
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar chat-background">
+          <div className="flex-1 relative overflow-hidden chat-background">
+            <div className="absolute inset-0 overflow-y-auto p-4 space-y-4 custom-scrollbar">
             {(() => {
               let lastDate = null;
               return filteredChatData.map((chat) => {
@@ -748,6 +788,7 @@ const Chatting = ({
               });
             })()}
             <div ref={messagesEndRef} />
+            </div>
           </div>
 
           {/* Input */}

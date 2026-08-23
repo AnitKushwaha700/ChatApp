@@ -1,11 +1,11 @@
 import React from "react";
-import SiteHeader from "./components/SiteHeader";
+import SiteHeader from "./layouts/SiteHeader";
 import Home from "./pages/Home";
 import { Routes, Route, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import Chat from "./pages/Chat";
 import UserDashboard from "./pages/UserDashboard";
-import AuthModals from "./components/AuthModals";
+import AuthModals from "./features/auth/AuthModals";
 
 const App = () => {
   const path = useLocation().pathname;

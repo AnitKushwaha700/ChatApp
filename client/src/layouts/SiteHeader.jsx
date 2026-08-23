@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../features/auth/AuthContext";
 import { useModal } from "../context/ModalContext";
 import { User, LogOut, LayoutDashboard, ChevronDown } from "lucide-react";
-import api from "../config/api";
+import api from "../lib/api";
 
 const SiteHeader = () => {
   const { user, isLogin, setUser, setIsLogin } = useAuth();

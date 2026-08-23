@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import Chatting from "../components/chat/Chatting";
-import ProfileModal from "../components/ProfileModal";
-import CallModal from "../components/chat/CallModal";
-import { useAuth } from "../context/AuthContext";
+import Chatting from "../features/chat/Chatting";
+import ProfileModal from "../features/profile/ProfileModal";
+import CallModal from "../features/chat/CallModal";
+import { useAuth } from "../features/auth/AuthContext";
 import { useNavigate } from "react-router-dom";
-import api from "../config/api";
-import socketAPI from "../config/webSocket";
+import api from "../lib/api";
+import socketAPI from "../lib/webSocket";
 import { LogOut, Settings, Search, Edit3, Palette } from "lucide-react";
 
 const getMediaUrl = (url) => {
@@ -95,12 +95,11 @@ const Chat = () => {
       setCallData({
         from: data.from,
         name: data.name || "User",
-        offer: data.offer,
         isVideo: data.isVideo,
       });
     };
-    socketAPI.on("callUser", handleIncomingCall);
-    return () => socketAPI.off("callUser", handleIncomingCall);
+    socketAPI.on("incomingCall", handleIncomingCall);
+    return () => socketAPI.off("incomingCall", handleIncomingCall);
   }, []);
 
   const initiateCall = (friend, isVideo) => {

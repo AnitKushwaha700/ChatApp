@@ -1,8 +1,8 @@
 import React, { useState, useRef } from "react";
 import { X, Camera } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import api from "../config/api";
-import { useAuth } from "../context/AuthContext";
+import api from "../../lib/api";
+import { useAuth } from "../auth/AuthContext";
 import toast from "react-hot-toast";
 
 const ProfileModal = ({ isOpen, onClose }) => {

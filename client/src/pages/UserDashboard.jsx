@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useAuth } from "../context/AuthContext";
-import api from "../config/api";
+import { useAuth } from "../features/auth/AuthContext";
+import api from "../lib/api";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { User, Mail, Phone, Calendar, Edit3, X, Save } from "lucide-react";

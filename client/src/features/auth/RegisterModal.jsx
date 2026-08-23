@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import toast from "react-hot-toast";
-import api from "../config/api";
-import { useModal } from "../context/ModalContext";
-import { useAuth } from "../context/AuthContext";
+import api from "../../lib/api";
+import { useModal } from "../../context/ModalContext";
+import { useAuth } from "./AuthContext";
 import { motion } from "motion/react";
 import { X } from "lucide-react";
 import { useNavigate } from "react-router-dom";

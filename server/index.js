@@ -6,13 +6,13 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import morgan from "morgan";
-import connectDB from "./src/config/db.js";
-import AuthRouter from "./src/routers/authRouter.js";
-import UserRouter from "./src/routers/userRouter.js";
+import connectDB from "./src/core/database/db.js";
+import AuthRouter from "./src/modules/auth/authRouter.js";
+import UserRouter from "./src/modules/user/userRouter.js";
 
 import http from "http";
 import { Server } from "socket.io";
-import websocket from "./src/config/webSocket.js";
+import websocket from "./src/core/socket/webSocket.js";
 
 const app = express();
 
