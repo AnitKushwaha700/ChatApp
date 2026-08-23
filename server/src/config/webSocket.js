@@ -29,6 +29,42 @@ const WebSocket = (io) => {
         io.emit("onlineUsers", OnlineUsers);
       }
     });
+
+    // WebRTC Signaling
+    socket.on("callUser", ({ userToCall, offer, from, isVideo }) => {
+      const receiverSocketId = OnlineUsers[userToCall];
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("callUser", { offer, from, isVideo });
+      }
+    });
+
+    socket.on("answerCall", ({ to, answer }) => {
+      const callerSocketId = OnlineUsers[to];
+      if (callerSocketId) {
+        io.to(callerSocketId).emit("callAccepted", { answer });
+      }
+    });
+
+    socket.on("iceCandidate", ({ to, candidate }) => {
+      const peerSocketId = OnlineUsers[to];
+      if (peerSocketId) {
+        io.to(peerSocketId).emit("iceCandidate", { candidate });
+      }
+    });
+
+    socket.on("rejectCall", ({ to }) => {
+      const callerSocketId = OnlineUsers[to];
+      if (callerSocketId) {
+        io.to(callerSocketId).emit("callRejected");
+      }
+    });
+
+    socket.on("endCall", ({ to }) => {
+      const peerSocketId = OnlineUsers[to];
+      if (peerSocketId) {
+        io.to(peerSocketId).emit("callEnded");
+      }
+    });
   });
 };
 
