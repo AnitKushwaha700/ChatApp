@@ -1,5 +1,5 @@
-import Message from "../models/messageModel.js";
-import { OnlineUsers, getIo } from "../config/webSocket.js";
+import Message from "./messageModel.js";
+import { OnlineUsers, getIo } from "../../core/socket/webSocket.js";
 
 export const SendMessage = async (req, res, next) => {
   try {

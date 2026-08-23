@@ -1,6 +1,6 @@
-import User from "../models/userModel.js";
-import Message from "../models/messageModel.js";
-import { OnlineUsers, getIo } from "../config/webSocket.js";
+import User from "./userModel.js";
+import Message from "../chat/messageModel.js";
+import { OnlineUsers, getIo } from "../../core/socket/webSocket.js";
 
 export const getAllUsers = async (req, res, next) => {
   try {

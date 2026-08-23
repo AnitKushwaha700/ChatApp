@@ -1,8 +1,8 @@
-import { generateToken } from "../config/authToken.js";
-import User from "../models/userModel.js";
+import { generateToken } from "./authToken.js";
+import User from "../user/userModel.js";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
-import { sendEmail } from "../utils/sendEmail.js";
+import { sendEmail } from "../../shared/utils/sendEmail.js";
 
 // ================= REGISTER =================
 export const UserRegister = async (req, res, next) => {

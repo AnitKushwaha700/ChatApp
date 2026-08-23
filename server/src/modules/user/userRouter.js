@@ -1,8 +1,8 @@
 import express from "express";
-import { getAllUsers, updateProfile, getConversations, getMe, sendRequest, acceptRequest, declineRequest } from "../controllers/userController.js";
-import { SendMessage, GetMessages, DeleteMessage, ClearChat, MarkMessagesAsRead } from "../controllers/messageController.js";
-import { Protect } from "../middleware/authMiddleware.js";
-import { uploadProfilePic, uploadMessageMedia } from "../config/multer.js";
+import { getAllUsers, updateProfile, getConversations, getMe, sendRequest, acceptRequest, declineRequest } from "./userController.js";
+import { SendMessage, GetMessages, DeleteMessage, ClearChat, MarkMessagesAsRead } from "../chat/messageController.js";
+import { Protect } from "../../shared/middlewares/authMiddleware.js";
+import { uploadProfilePic, uploadMessageMedia } from "../../core/storage/multer.js";
 
 const router = express.Router();
 

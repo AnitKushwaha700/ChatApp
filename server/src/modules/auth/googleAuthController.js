@@ -1,5 +1,5 @@
-import { generateToken } from "../config/authToken.js";
-import User from "../models/userModel.js";
+import { generateToken } from "./authToken.js";
+import User from "../user/userModel.js";
 
 // ================= GOOGLE LOGIN =================
 export const GoogleLogin = async (req, res, next) => {

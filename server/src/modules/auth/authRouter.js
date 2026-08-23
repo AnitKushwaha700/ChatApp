@@ -1,6 +1,6 @@
 import express from "express";
-import { UserRegister, UserLogin, ForgotPassword, ResetPassword } from "../controllers/authController.js";
-import { GoogleLogin } from "../controllers/googleAuthController.js";
+import { UserRegister, UserLogin, ForgotPassword, ResetPassword } from "./authController.js";
+import { GoogleLogin } from "./googleAuthController.js";
 
 const router = express.Router();
 

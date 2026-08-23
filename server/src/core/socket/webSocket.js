@@ -30,18 +30,36 @@ const WebSocket = (io) => {
       }
     });
 
-    // WebRTC Signaling
-    socket.on("callUser", ({ userToCall, offer, from, isVideo }) => {
+    // WebRTC Signaling Flow
+    // 1. Caller sends a call request (ringing)
+    socket.on("requestCall", ({ userToCall, from, name, isVideo }) => {
       const receiverSocketId = OnlineUsers[userToCall];
       if (receiverSocketId) {
-        io.to(receiverSocketId).emit("callUser", { offer, from, isVideo });
+        io.to(receiverSocketId).emit("incomingCall", { from, name, isVideo });
       }
     });
 
-    socket.on("answerCall", ({ to, answer }) => {
+    // 2. Receiver accepts the call request
+    socket.on("acceptCall", ({ to }) => {
       const callerSocketId = OnlineUsers[to];
       if (callerSocketId) {
-        io.to(callerSocketId).emit("callAccepted", { answer });
+        io.to(callerSocketId).emit("callAccepted");
+      }
+    });
+
+    // 3. Caller generates WebRTC offer and sends it
+    socket.on("webrtcOffer", ({ to, offer }) => {
+      const receiverSocketId = OnlineUsers[to];
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("webrtcOffer", { offer });
+      }
+    });
+
+    // 4. Receiver generates WebRTC answer and sends it
+    socket.on("webrtcAnswer", ({ to, answer }) => {
+      const callerSocketId = OnlineUsers[to];
+      if (callerSocketId) {
+        io.to(callerSocketId).emit("webrtcAnswer", { answer });
       }
     });
 
