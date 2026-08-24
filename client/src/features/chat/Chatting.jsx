@@ -21,6 +21,14 @@ import {
   CheckCheck,
   Video,
   Phone,
+  Palette,
+  Sun,
+  Moon,
+  MoonStar,
+  MessageSquare,
+  Briefcase,
+  Leaf,
+  Cloud,
 } from "lucide-react";
 import EmojiPicker from "emoji-picker-react";
 import { motion } from "motion/react";
@@ -515,47 +523,77 @@ const Chatting = ({
 
       {/* Theme Modal */}
       {isThemeModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-base-100 p-6 rounded-2xl shadow-xl w-full max-w-sm flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="font-semibold text-lg text-base-content">
-                Select Theme
-              </h3>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
+          <div className="bg-base-100 p-6 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 border border-base-content/5">
+            <div className="flex justify-between items-center mb-1">
+              <div className="flex items-center gap-2">
+                <Palette size={20} className="text-primary" />
+                <h3 className="font-bold text-xl text-base-content">
+                  Appearance
+                </h3>
+              </div>
               <button
                 onClick={() => setIsThemeModalOpen(false)}
-                className="btn btn-sm btn-circle btn-ghost"
+                className="btn btn-sm btn-circle btn-ghost hover:bg-base-content/10"
               >
                 <X size={16} />
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto custom-scrollbar">
+            <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto custom-scrollbar pr-1 -mr-1 pb-2">
               {[
-                "light",
-                "dark",
-                "black",
-                "spotify",
-                "claude",
-                "corporate",
-                "ghibli",
-                "pastel",
-              ].map((theme) => (
+                { id: "light", name: "Light Mode", icon: Sun },
+                { id: "dark", name: "Dark Mode", icon: Moon },
+                { id: "black", name: "Midnight", icon: MoonStar },
+                { id: "spotify", name: "Spotify", icon: Music },
+                { id: "claude", name: "Claude", icon: MessageSquare },
+                { id: "corporate", name: "Corporate", icon: Briefcase },
+                { id: "ghibli", name: "Ghibli", icon: Leaf },
+                { id: "pastel", name: "Pastel", icon: Cloud },
+              ].map((theme) => {
+                const Icon = theme.icon;
+                const isActive = (localStorage.getItem("theme") || "dark") === theme.id;
+                
+                return (
                 <button
-                  key={theme}
+                  key={theme.id}
+                  data-theme={theme.id}
                   onClick={() => {
-                    document.documentElement.setAttribute("data-theme", theme);
-                    localStorage.setItem("theme", theme);
-                    localStorage.setItem("mingoTheme", theme);
+                    document.documentElement.setAttribute("data-theme", theme.id);
+                    localStorage.setItem("theme", theme.id);
+                    localStorage.setItem("mingoTheme", theme.id);
                     setIsThemeModalOpen(false);
                   }}
-                  className={`text-left px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer border-none outline-none ${
-                    localStorage.getItem("theme") === theme
-                      ? "bg-primary/20 text-primary font-medium"
-                      : "hover:bg-base-content/10 text-base-content/80"
+                  className={`relative flex items-center justify-between w-full p-4 rounded-2xl transition-all duration-300 overflow-hidden group border-2 bg-base-100 text-base-content ${
+                    isActive 
+                      ? "border-primary shadow-xl scale-[1.02] ring-4 ring-primary/10 z-10" 
+                      : "border-transparent hover:border-primary/30 hover:scale-[1.01] shadow-sm hover:shadow-md"
                   }`}
                 >
-                  {theme.charAt(0).toUpperCase() + theme.slice(1)}
+                  <div className="flex items-center gap-4 relative z-10">
+                    <div className="p-2.5 rounded-xl bg-primary text-primary-content shadow-sm group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                      <Icon size={22} />
+                    </div>
+                    <div className="flex flex-col items-start">
+                       <span className="font-bold text-base tracking-tight">{theme.name}</span>
+                       <div className="flex gap-1.5 mt-1.5">
+                          <div className="w-3.5 h-3.5 rounded-full bg-primary shadow-sm" title="Primary"></div>
+                          <div className="w-3.5 h-3.5 rounded-full bg-secondary shadow-sm" title="Secondary"></div>
+                          <div className="w-3.5 h-3.5 rounded-full bg-accent shadow-sm" title="Accent"></div>
+                          <div className="w-3.5 h-3.5 rounded-full bg-neutral shadow-sm" title="Neutral"></div>
+                       </div>
+                    </div>
+                  </div>
+                  
+                  {isActive && (
+                    <div className="relative z-10 bg-primary text-primary-content rounded-full p-1.5 shadow-md animate-in zoom-in duration-300">
+                      <Check size={18} strokeWidth={3} />
+                    </div>
+                  )}
+                  
+                  {/* Decorative background element to show off base-200/base-300 */}
+                  <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-base-200 to-transparent -z-0 opacity-80"></div>
                 </button>
-              ))}
+              )})}
             </div>
           </div>
         </div>
