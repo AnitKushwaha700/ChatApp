@@ -16,8 +16,7 @@ const CallModal = ({
   const [remoteStream, setRemoteStream] = useState(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
-  const [callStatus, setCallStatus] = useState(incomingCall ? "incoming" : "calling"); // incoming, calling, active
-  const [peerConnection, setPeerConnection] = useState(null);
+  const [callStatus, setCallStatus] = useState("");
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -31,20 +30,27 @@ const CallModal = ({
   }, [callData]);
 
   useEffect(() => {
-    // Initialize WebRTC Peer Connection
-    const configuration = {
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    };
-    const pc = new RTCPeerConnection(configuration);
-    pcRef.current = pc;
-    setPeerConnection(pc);
+    if (incomingCall) setCallStatus("incoming");
+    else if (isCalling) setCallStatus("calling");
+    else setCallStatus("");
+  }, [incomingCall, isCalling]);
 
+  const initializePeerConnection = () => {
+    if (pcRef.current) pcRef.current.close();
+    
+    const pc = new RTCPeerConnection({
+      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+    });
+    
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        socketAPI.emit("iceCandidate", {
-          to: callData?.to || callData?.from,
-          candidate: event.candidate,
-        });
+        const currentData = callDataRef.current;
+        if (currentData) {
+          socketAPI.emit("iceCandidate", {
+            to: currentData.to || currentData.from,
+            candidate: event.candidate,
+          });
+        }
       }
     };
 
@@ -52,22 +58,24 @@ const CallModal = ({
       setRemoteStream(event.streams[0]);
     };
 
-    // Socket Event Listeners for WebRTC
-    const handleIceCandidate = async ({ candidate }) => {
-      if (pc.remoteDescription && pc.remoteDescription.type) {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-      } else {
-        candidatesQueueRef.current.push(candidate);
-      }
-    };
+    pcRef.current = pc;
+    return pc;
+  };
 
-    const processQueue = async () => {
-      while (candidatesQueueRef.current.length > 0) {
-        const candidate = candidatesQueueRef.current.shift();
+  const processQueue = async () => {
+    const pc = pcRef.current;
+    if (!pc) return;
+    while (candidatesQueueRef.current.length > 0) {
+      const candidate = candidatesQueueRef.current.shift();
+      try {
         await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (e) {
+        console.error("Error adding queued ice candidate", e);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     const handleCallAccepted = async () => {
       setCallStatus("active");
       const currentCallData = callDataRef.current;
@@ -89,37 +97,35 @@ const CallModal = ({
         }
 
         setLocalStream(stream);
+        
+        const pc = initializePeerConnection();
         stream.getTracks().forEach((track) => {
-          if (pcRef.current && pcRef.current.signalingState !== "closed") {
-            pcRef.current.addTrack(track, stream);
-          }
+          pc.addTrack(track, stream);
         });
 
-        if (pcRef.current && pcRef.current.signalingState !== "closed") {
-          const offer = await pcRef.current.createOffer();
-          await pcRef.current.setLocalDescription(offer);
-          
-          socketAPI.emit("webrtcOffer", {
-            to: currentCallData.to,
-            offer,
-          });
-        }
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        
+        socketAPI.emit("webrtcOffer", {
+          to: currentCallData.to,
+          offer,
+        });
       } catch (error) {
         console.error("Error starting camera on caller side", error);
-        cleanupCall();
-        if (onEndCall) onEndCall();
+        handleHangup();
       }
     };
 
     const handleWebrtcOffer = async ({ offer }) => {
-      if (pcRef.current && pcRef.current.signalingState !== "closed") {
-        await pcRef.current.setRemoteDescription(new RTCSessionDescription(offer));
-        processQueue();
+      const pc = pcRef.current;
+      const currentCallData = callDataRef.current;
+      if (pc && currentCallData) {
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        await processQueue();
         
-        const answer = await pcRef.current.createAnswer();
-        await pcRef.current.setLocalDescription(answer);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
 
-        const currentCallData = callDataRef.current;
         socketAPI.emit("webrtcAnswer", {
           to: currentCallData.from,
           answer,
@@ -128,9 +134,23 @@ const CallModal = ({
     };
 
     const handleWebrtcAnswer = async ({ answer }) => {
-      if (pcRef.current && pcRef.current.signalingState !== "closed") {
-        await pcRef.current.setRemoteDescription(new RTCSessionDescription(answer));
-        processQueue();
+      const pc = pcRef.current;
+      if (pc) {
+        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+        await processQueue();
+      }
+    };
+
+    const handleIceCandidate = async ({ candidate }) => {
+      const pc = pcRef.current;
+      if (pc && pc.remoteDescription && pc.remoteDescription.type) {
+        try {
+          await pc.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (e) {
+          console.error("Error adding ice candidate", e);
+        }
+      } else {
+        candidatesQueueRef.current.push(candidate);
       }
     };
 
@@ -158,19 +178,26 @@ const CallModal = ({
       socketAPI.off("iceCandidate", handleIceCandidate);
       socketAPI.off("callRejected", handleCallRejected);
       socketAPI.off("callEnded", handleCallEnded);
-      cleanupCall();
     };
   }, []);
 
   const cleanupCall = () => {
-    if (localStream) {
-      localStream.getTracks().forEach((track) => track.stop());
-    }
+    setLocalStream((prevStream) => {
+      if (prevStream) {
+        prevStream.getTracks().forEach((track) => track.stop());
+      }
+      return null;
+    });
+    setRemoteStream(null);
     if (pcRef.current) {
       pcRef.current.close();
+      pcRef.current = null;
     }
-    setLocalStream(null);
-    setRemoteStream(null);
+    candidatesQueueRef.current = [];
+    initiatedCallIdRef.current = null;
+    setCallStatus("");
+    setIsMuted(false);
+    setIsVideoOff(false);
   };
 
   useEffect(() => {
@@ -188,7 +215,7 @@ const CallModal = ({
   // Handle Outgoing Call - Send Request Only
   useEffect(() => {
     let isMounted = true;
-    if (isCalling && callData && !incomingCall && peerConnection) {
+    if (isCalling && callData && !incomingCall) {
       const currentCallId = callData.to + (callData.isVideo ? "V" : "A");
       if (initiatedCallIdRef.current === currentCallId) return;
       initiatedCallIdRef.current = currentCallId;
@@ -203,7 +230,7 @@ const CallModal = ({
     return () => {
       isMounted = false;
     };
-  }, [isCalling, callData, incomingCall, peerConnection, user._id]);
+  }, [isCalling, callData, incomingCall, user._id]);
 
   const handleAccept = async () => {
     try {
@@ -230,10 +257,10 @@ const CallModal = ({
       }
 
       setLocalStream(stream);
+      
+      const pc = initializePeerConnection();
       stream.getTracks().forEach((track) => {
-        if (pcRef.current && pcRef.current.signalingState !== "closed") {
-          pcRef.current.addTrack(track, stream);
-        }
+        pc.addTrack(track, stream);
       });
 
       socketAPI.emit("acceptCall", { to: callData.from });
@@ -253,20 +280,20 @@ const CallModal = ({
   const handleHangup = () => {
     socketAPI.emit("endCall", { to: callData?.to || callData?.from });
     cleanupCall();
-    onEndCall();
+    if (onEndCall) onEndCall();
   };
 
   const toggleMute = () => {
     if (localStream) {
       localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
-      setIsMuted(!isMuted);
+      setIsMuted(!localStream.getAudioTracks()[0].enabled);
     }
   };
 
   const toggleVideo = () => {
     if (localStream && callData.isVideo) {
       localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled;
-      setIsVideoOff(!isVideoOff);
+      setIsVideoOff(!localStream.getVideoTracks()[0].enabled);
     }
   };
 
