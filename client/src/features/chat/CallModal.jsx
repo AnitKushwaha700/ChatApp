@@ -3,6 +3,13 @@ import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff } from "lucide-react";
 import socketAPI from "../../lib/webSocket";
 import { useAuth } from "../auth/AuthContext";
 
+const ICE_SERVERS = {
+  iceServers: [
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" }
+  ],
+};
+
 const CallModal = ({
   isCalling,
   incomingCall,
@@ -35,12 +42,38 @@ const CallModal = ({
     else setCallStatus("");
   }, [incomingCall, isCalling]);
 
-  const initializePeerConnection = () => {
+  const processIceQueue = async (pc) => {
+    while (candidatesQueueRef.current.length > 0) {
+      const candidate = candidatesQueueRef.current.shift();
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } catch (e) {
+        console.error("Error adding queued ice candidate", e);
+      }
+    }
+  };
+
+  const getMedia = async (isVideo) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: isVideo,
+        audio: true,
+      });
+      return stream;
+    } catch (err) {
+      if (err.name === 'NotReadableError' && isVideo) {
+        console.warn("Camera in use, falling back to audio only");
+        setIsVideoOff(true);
+        return await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+      } else {
+        throw err;
+      }
+    }
+  };
+
+  const createPeerConnection = () => {
     if (pcRef.current) pcRef.current.close();
-    
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
-    });
+    const pc = new RTCPeerConnection(ICE_SERVERS);
     
     pc.onicecandidate = (event) => {
       if (event.candidate) {
@@ -62,17 +95,27 @@ const CallModal = ({
     return pc;
   };
 
-  const processQueue = async () => {
-    const pc = pcRef.current;
-    if (!pc) return;
-    while (candidatesQueueRef.current.length > 0) {
-      const candidate = candidatesQueueRef.current.shift();
-      try {
-        await pc.addIceCandidate(new RTCIceCandidate(candidate));
-      } catch (e) {
-        console.error("Error adding queued ice candidate", e);
+  const cleanupCall = () => {
+    setLocalStream((prevStream) => {
+      if (prevStream) {
+        prevStream.getTracks().forEach((track) => {
+          track.stop();
+        });
       }
+      return null;
+    });
+    setRemoteStream(null);
+    if (pcRef.current) {
+      pcRef.current.ontrack = null;
+      pcRef.current.onicecandidate = null;
+      pcRef.current.close();
+      pcRef.current = null;
     }
+    candidatesQueueRef.current = [];
+    initiatedCallIdRef.current = null;
+    setCallStatus("");
+    setIsMuted(false);
+    setIsVideoOff(false);
   };
 
   useEffect(() => {
@@ -82,23 +125,10 @@ const CallModal = ({
       if (!currentCallData) return;
 
       try {
-        let stream;
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: currentCallData.isVideo,
-            audio: true,
-          });
-        } catch (err) {
-          if (err.name === 'NotReadableError' && currentCallData.isVideo) {
-            console.warn("Camera in use, falling back to audio only");
-            stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
-            setIsVideoOff(true);
-          } else throw err;
-        }
-
+        const stream = await getMedia(currentCallData.isVideo);
         setLocalStream(stream);
         
-        const pc = initializePeerConnection();
+        const pc = createPeerConnection();
         stream.getTracks().forEach((track) => {
           pc.addTrack(track, stream);
         });
@@ -117,11 +147,20 @@ const CallModal = ({
     };
 
     const handleWebrtcOffer = async ({ offer }) => {
-      const pc = pcRef.current;
+      // Receiver gets offer
       const currentCallData = callDataRef.current;
-      if (pc && currentCallData) {
+      if (!currentCallData) return;
+
+      // The receiver should already have their peer connection set up from handleAccept
+      const pc = pcRef.current;
+      if (!pc) {
+        console.error("Peer connection not initialized on receiver");
+        return;
+      }
+      
+      try {
         await pc.setRemoteDescription(new RTCSessionDescription(offer));
-        await processQueue();
+        await processIceQueue(pc);
         
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
@@ -130,14 +169,21 @@ const CallModal = ({
           to: currentCallData.from,
           answer,
         });
+      } catch (e) {
+        console.error("Error handling WebRTC offer:", e);
       }
     };
 
     const handleWebrtcAnswer = async ({ answer }) => {
+      // Caller gets answer
       const pc = pcRef.current;
       if (pc) {
-        await pc.setRemoteDescription(new RTCSessionDescription(answer));
-        await processQueue();
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(answer));
+          await processIceQueue(pc);
+        } catch (e) {
+          console.error("Error handling WebRTC answer:", e);
+        }
       }
     };
 
@@ -147,7 +193,7 @@ const CallModal = ({
         try {
           await pc.addIceCandidate(new RTCIceCandidate(candidate));
         } catch (e) {
-          console.error("Error adding ice candidate", e);
+          console.error("Error adding ICE candidate:", e);
         }
       } else {
         candidatesQueueRef.current.push(candidate);
@@ -179,26 +225,7 @@ const CallModal = ({
       socketAPI.off("callRejected", handleCallRejected);
       socketAPI.off("callEnded", handleCallEnded);
     };
-  }, []);
-
-  const cleanupCall = () => {
-    setLocalStream((prevStream) => {
-      if (prevStream) {
-        prevStream.getTracks().forEach((track) => track.stop());
-      }
-      return null;
-    });
-    setRemoteStream(null);
-    if (pcRef.current) {
-      pcRef.current.close();
-      pcRef.current = null;
-    }
-    candidatesQueueRef.current = [];
-    initiatedCallIdRef.current = null;
-    setCallStatus("");
-    setIsMuted(false);
-    setIsVideoOff(false);
-  };
+  }, [onEndCall]);
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
@@ -237,32 +264,15 @@ const CallModal = ({
       setCallStatus("active");
       if (onAcceptCall) onAcceptCall();
 
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: callData.isVideo,
-          audio: true,
-        });
-      } catch (err) {
-        if (err.name === 'NotReadableError' && callData.isVideo) {
-          console.warn("Camera in use, falling back to audio only");
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: false,
-            audio: true,
-          });
-          setIsVideoOff(true);
-        } else {
-          throw err;
-        }
-      }
-
+      const stream = await getMedia(callData.isVideo);
       setLocalStream(stream);
       
-      const pc = initializePeerConnection();
+      const pc = createPeerConnection();
       stream.getTracks().forEach((track) => {
         pc.addTrack(track, stream);
       });
 
+      // After adding tracks and creating the PC, we notify the caller
       socketAPI.emit("acceptCall", { to: callData.from });
       
     } catch (error) {
@@ -285,15 +295,21 @@ const CallModal = ({
 
   const toggleMute = () => {
     if (localStream) {
-      localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
-      setIsMuted(!localStream.getAudioTracks()[0].enabled);
+      const audioTrack = localStream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMuted(!audioTrack.enabled);
+      }
     }
   };
 
   const toggleVideo = () => {
     if (localStream && callData.isVideo) {
-      localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled;
-      setIsVideoOff(!localStream.getVideoTracks()[0].enabled);
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsVideoOff(!videoTrack.enabled);
+      }
     }
   };
 
