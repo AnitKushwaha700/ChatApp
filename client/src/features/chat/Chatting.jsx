@@ -383,7 +383,7 @@ const Chatting = ({
           <img
             src={getMediaUrl(chat.mediaUrl)}
             alt="Attachment"
-            className="max-w-[240px] sm:max-w-[300px] rounded-lg object-cover"
+            className="max-w-[240px] sm:max-w-[300px] h-auto rounded-lg object-cover"
           />
           {chat.message && chat.message !== "Sent an attachment" && (
             <p className="text-sm mt-2 px-1">{chat.message}</p>
@@ -727,7 +727,7 @@ const Chatting = ({
                       className={`chat ${isMe ? "chat-sender" : "chat-receiver"} group relative`}
                     >
                       <div className="chat-avatar avatar">
-                        <div className="w-10 h-10 rounded-full border border-base-content/10">
+                        <div className="w-10 h-10 rounded-full border border-base-content/10 overflow-hidden">
                           <img
                             src={
                               isMe
@@ -739,6 +739,7 @@ const Chatting = ({
                                   : `https://ui-avatars.com/api/?name=${selectedFriend?.fullName}`
                             }
                             alt="avatar"
+                            className="w-full h-full object-cover"
                           />
                         </div>
                       </div>
