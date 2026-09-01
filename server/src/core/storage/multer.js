@@ -16,6 +16,7 @@ const profilePicStorage = new CloudinaryStorage({
   params: {
     folder: "chat_app/profiles",
     allowed_formats: ["jpg", "jpeg", "png", "webp"],
+    transformation: [{ width: 800, height: 800, crop: "fill", gravity: "face", quality: "auto" }],
   },
 });
 
