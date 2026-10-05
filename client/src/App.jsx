@@ -6,6 +6,7 @@ import { Toaster } from "react-hot-toast";
 import Chat from "./pages/Chat";
 import UserDashboard from "./pages/UserDashboard";
 import AuthModals from "./features/auth/AuthModals";
+import InstallPrompt from "./components/InstallPrompt";
 
 const App = () => {
   const path = useLocation().pathname;
@@ -19,6 +20,7 @@ const App = () => {
     <>
       <Toaster />
       <AuthModals />
+      <InstallPrompt />
       {path !== "/chat" && <SiteHeader />}
       <Routes>
         <Route path="/" element={<Home />} />
