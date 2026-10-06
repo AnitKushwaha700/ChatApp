@@ -19,7 +19,7 @@ const app = express();
 const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
-  "http://172.168.7.164:5173",
+  "https://chat-app-anikett78.vercel.app",
 ];
 
 // Middlewares
@@ -32,7 +32,8 @@ app.use(
         origin.startsWith("http://127.0.0.1") ||
         origin.startsWith("http://192.168.") ||
         origin.startsWith("http://172.") ||
-        origin.startsWith("http://10.")
+        origin.startsWith("http://10.") ||
+        allowedOrigins.includes(origin)
       ) {
         callback(null, true);
       } else {
@@ -78,7 +79,8 @@ const io = new Server(httpServer, {
         origin.startsWith("http://127.0.0.1") ||
         origin.startsWith("http://192.168.") ||
         origin.startsWith("http://172.") ||
-        origin.startsWith("http://10.")
+        origin.startsWith("http://10.") ||
+        allowedOrigins.includes(origin)
       ) {
         callback(null, true);
       } else {
