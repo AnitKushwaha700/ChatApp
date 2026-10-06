@@ -26,12 +26,14 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || 
-          origin.startsWith("http://localhost") || 
-          origin.startsWith("http://127.0.0.1") || 
-          origin.startsWith("http://192.168.") || 
-          origin.startsWith("http://172.") || 
-          origin.startsWith("http://10.")) {
+      if (
+        !origin ||
+        origin.startsWith("http://localhost") ||
+        origin.startsWith("http://127.0.0.1") ||
+        origin.startsWith("http://192.168.") ||
+        origin.startsWith("http://172.") ||
+        origin.startsWith("http://10.")
+      ) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
@@ -70,12 +72,14 @@ const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
   cors: {
     origin: function (origin, callback) {
-      if (!origin || 
-          origin.startsWith("http://localhost") || 
-          origin.startsWith("http://127.0.0.1") || 
-          origin.startsWith("http://192.168.") || 
-          origin.startsWith("http://172.") || 
-          origin.startsWith("http://10.")) {
+      if (
+        !origin ||
+        origin.startsWith("http://localhost") ||
+        origin.startsWith("http://127.0.0.1") ||
+        origin.startsWith("http://192.168.") ||
+        origin.startsWith("http://172.") ||
+        origin.startsWith("http://10.")
+      ) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
