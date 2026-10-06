@@ -10,12 +10,15 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['favicon.svg', 'pwa-icon.svg', 'chatApp-image.png'],
       manifest: {
         name: 'ChatApp',
         short_name: 'ChatApp',
-        description: 'A modern chat application',
-        theme_color: '#ffffff',
+        description: 'A modern chat application built for speed and reliability.',
+        theme_color: '#000000',
+        background_color: '#ffffff',
+        display: 'standalone',
+        orientation: 'portrait-primary',
         icons: [
           {
             src: '/pwa-icon.svg',
@@ -29,9 +32,51 @@ export default defineConfig({
             type: 'image/svg+xml',
             purpose: 'any maskable'
           }
-        ],
-        display: 'standalone',
-        background_color: '#ffffff'
+        ]
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365
+              }
+            }
+          },
+          {
+            // Cache API requests with Network First (fallback to cache)
+            urlPattern: /\/api\/.*$/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-cache',
+              networkTimeoutSeconds: 5,
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            // Cache media/images
+            urlPattern: /\.(?:png|gif|jpg|jpeg|webp|svg)$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'media-cache',
+              expiration: {
+                maxEntries: 100,
+                maxAgeSeconds: 60 * 60 * 24 * 30
+              }
+            }
+          }
+        ]
       }
     })
   ],

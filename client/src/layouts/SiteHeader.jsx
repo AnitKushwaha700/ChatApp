@@ -35,7 +35,7 @@ const SiteHeader = () => {
   const userInitial = user?.fullName ? user.fullName.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase();
 
   return (
-    <div className="h-16 bg-base-100/80 backdrop-blur-md sticky top-0 z-40 border-b border-base-200 shadow-sm flex items-center justify-between px-4 sm:px-6">
+    <div className="h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-base-100/80 backdrop-blur-md sticky top-0 z-40 border-b border-base-200 shadow-sm flex items-center justify-between px-4 sm:px-6">
       <h1
         className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary cursor-pointer hover:opacity-80 transition-opacity"
         onClick={() => navigate("/")}

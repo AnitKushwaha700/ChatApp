@@ -31,7 +31,7 @@ const UserDashboard = () => {
 
   if (!isLogin) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-base-200">
+      <div className="min-h-[calc(100dvh-4rem)] flex items-center justify-center bg-base-200">
         <div className="text-center p-8">
           <h1 className="text-4xl font-bold text-error mb-4">Unauthorized Access</h1>
           <p className="text-lg text-base-content/70">Please log in to view your dashboard.</p>
@@ -95,7 +95,7 @@ const UserDashboard = () => {
   const userInitial = user?.fullName ? user.fullName.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase();
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-base-200 py-12 px-4 relative overflow-hidden">
+    <div className="min-h-[calc(100dvh-4rem)] bg-base-200 py-12 px-4 relative overflow-hidden">
       {/* Background gradients */}
       <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-primary/20 rounded-full blur-[100px]" />
       <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-secondary/20 rounded-full blur-[100px]" />

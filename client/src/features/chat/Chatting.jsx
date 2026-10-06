@@ -358,6 +358,18 @@ const Chatting = ({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [filteredChatData]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+    window.addEventListener("resize", handleResize);
+    window.visualViewport?.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.visualViewport?.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
   const renderMessageContent = (chat, emojiOnly) => {
     if (chat.messageType === "text") {
       if (emojiOnly) {
@@ -439,7 +451,7 @@ const Chatting = ({
   return (
     <div className="flex flex-col h-full w-full relative">
       {/* Header */}
-      <div className="p-4 flex items-center justify-between border-b border-base-content/10 bg-base-200">
+      <div className="p-4 flex items-center justify-between border-b border-base-content/10 bg-base-200 pt-[calc(env(safe-area-inset-top)+1rem)]">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setSelectedFriend(null)}
@@ -831,7 +843,7 @@ const Chatting = ({
           </div>
 
           {/* Input */}
-          <div className="p-3 bg-base-100 border-t border-base-content/10">
+          <div className="p-3 bg-base-100 border-t border-base-content/10 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
             <form
               onSubmit={(e) => handleMessageSend(e, "text")}
               className="flex items-center gap-1 sm:gap-2 bg-base-200 rounded-full p-1 sm:p-1.5 border border-base-content/10 shadow-sm relative"

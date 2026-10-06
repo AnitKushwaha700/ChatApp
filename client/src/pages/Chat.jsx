@@ -116,7 +116,7 @@ const Chat = () => {
   const displayUsers = recentUser;
 
   return (
-    <div className="flex h-screen bg-base-100 overflow-hidden text-base-content">
+    <div className="flex h-[100dvh] bg-base-100 overflow-hidden text-base-content">
       {/* Sidebar */}
       <div className={`${selectedFriend ? 'hidden md:flex' : 'flex'} w-full md:w-80 bg-base-200 flex-col h-full border-r border-base-content/10 shrink-0`}>
         
