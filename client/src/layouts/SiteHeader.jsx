@@ -1,19 +1,17 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
 import { useModal } from "../context/ModalContext";
-import { User, LogOut, LayoutDashboard, ChevronDown } from "lucide-react";
-import api from "../lib/api";
+import { LogOut, LayoutDashboard, ChevronDown } from "lucide-react";
 
 const SiteHeader = () => {
   const { user, isLogin, setUser, setIsLogin } = useAuth();
   const navigate = useNavigate();
-  const [selectedTheme, setSelectedTheme] = useState("light");
+  const [selectedTheme, setSelectedTheme] = useState(() => localStorage.getItem("theme") || "light");
   const { openLogin, openRegister } = useModal();
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") || "light";
     document.documentElement.setAttribute("data-theme", savedTheme);
-    setSelectedTheme(savedTheme);
   }, []);
 
 

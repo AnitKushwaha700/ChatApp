@@ -15,7 +15,6 @@ import {
   StopCircle,
   Smile,
   ArrowLeft,
-  Trash2,
   MoreVertical,
   Check,
   CheckCheck,
@@ -178,7 +177,6 @@ const Chatting = ({
           }),
         );
       }
-      setActiveMessageDropdown(null);
     } catch (error) {
       console.error("Failed to delete message", error);
     }
@@ -277,7 +275,9 @@ const Chatting = ({
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchChatData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFriend]);
 
   useEffect(() => {
@@ -325,7 +325,7 @@ const Chatting = ({
       socketAPI.off("newMessage", handleNewMessage);
       socketAPI.off("messageDeleted", handleMessageDeleted);
     };
-  }, [selectedFriend]);
+  }, [selectedFriend, user._id]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

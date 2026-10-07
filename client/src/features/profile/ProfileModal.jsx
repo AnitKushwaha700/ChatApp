@@ -1,6 +1,6 @@
-import React, { useState, useRef } from "react";
+import { useState, useRef } from "react";
 import { X, Camera } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import api from "../../lib/api";
 import { useAuth } from "../auth/AuthContext";
 import toast from "react-hot-toast";

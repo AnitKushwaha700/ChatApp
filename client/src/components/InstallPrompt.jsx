@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Download, Share, PlusSquare, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -17,6 +17,7 @@ const InstallPrompt = () => {
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
     
     if (isIosDevice) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsIOS(true);
       // Show iOS prompt after a slight delay
       const timer = setTimeout(() => {

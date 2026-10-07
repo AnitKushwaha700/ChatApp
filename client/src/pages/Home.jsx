@@ -1,11 +1,9 @@
-import React from "react";
+
 import { motion } from "motion/react";
-import { useNavigate } from "react-router-dom";
 import { useModal } from "../context/ModalContext";
 import { MessageSquare, Zap, Shield, Users } from "lucide-react";
 
 const Home = () => {
-  const navigate = useNavigate();
   const { openLogin } = useModal();
 
   const containerVariants = {

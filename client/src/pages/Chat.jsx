@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Chatting from "../features/chat/Chatting";
 import ProfileModal from "../features/profile/ProfileModal";
 import CallModal from "../features/chat/CallModal";
@@ -6,7 +6,7 @@ import { useAuth } from "../features/auth/AuthContext";
 import { useNavigate } from "react-router-dom";
 import api from "../lib/api";
 import socketAPI from "../lib/webSocket";
-import { LogOut, Settings, Search, Edit3, Palette } from "lucide-react";
+import { LogOut, Search, Edit3 } from "lucide-react";
 
 const getMediaUrl = (url) => {
   if (!url) return "";
@@ -35,7 +35,7 @@ const Chat = () => {
     }
   };
 
-  const fetchMe = async () => {
+  const fetchMe = useCallback(async () => {
     try {
       const res = await api.get("/user/me");
       setUser(res.data.data);
@@ -43,22 +43,30 @@ const Chat = () => {
     } catch (error) {
       console.error("Failed to fetch me", error);
     }
-  };
+  }, [setUser]);
 
   useEffect(() => {
     if (!isLogin) {
       navigate("/");
     } else {
       fetchMe();
-      if (user) {
-        socketAPI.emit("createPath", user._id);
-      }
     }
-  }, [isLogin, navigate]);
+  }, [isLogin, navigate, fetchMe]);
 
-  const handleLogout = () => {
+  useEffect(() => {
+    if (isLogin && user) {
+      socketAPI.emit("createPath", user._id);
+    }
+  }, [isLogin, user]);
+
+  const handleLogout = async () => {
     if (user) {
       socketAPI.emit("destroyPath", user._id);
+    }
+    try {
+      await api.post("/auth/logout");
+    } catch (error) {
+      console.error("Logout failed", error);
     }
     setUser(null);
     sessionStorage.removeItem("AppUser");

@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../features/auth/AuthContext";
 import api from "../lib/api";
-import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { User, Mail, Phone, Calendar, Edit3, X, Save } from "lucide-react";
 
 const UserDashboard = () => {
-  const { user, isLogin, setUser, setIsLogin } = useAuth();
-  const navigate = useNavigate();
+  const { user, isLogin, setUser } = useAuth();
 
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -21,6 +19,7 @@ const UserDashboard = () => {
 
   useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         fullName: user.fullName || "",
         email: user.email || "",

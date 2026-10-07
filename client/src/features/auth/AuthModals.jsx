@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useModal } from "../../context/ModalContext";
 import { AnimatePresence, motion } from "motion/react";
 import LoginModal from "./LoginModal";

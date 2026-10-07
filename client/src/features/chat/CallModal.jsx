@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff } from "lucide-react";
 import socketAPI from "../../lib/webSocket";
 import { useAuth } from "../auth/AuthContext";
@@ -37,6 +37,7 @@ const CallModal = ({
   }, [callData]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (incomingCall) setCallStatus("incoming");
     else if (isCalling) setCallStatus("calling");
     else setCallStatus("");
@@ -93,6 +94,12 @@ const CallModal = ({
 
     pcRef.current = pc;
     return pc;
+  };
+
+  const handleHangup = () => {
+    socketAPI.emit("endCall", { to: callData?.to || callData?.from });
+    cleanupCall();
+    if (onEndCall) onEndCall();
   };
 
   const cleanupCall = () => {
@@ -225,6 +232,7 @@ const CallModal = ({
       socketAPI.off("callRejected", handleCallRejected);
       socketAPI.off("callEnded", handleCallEnded);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onEndCall]);
 
   useEffect(() => {
@@ -241,7 +249,6 @@ const CallModal = ({
 
   // Handle Outgoing Call - Send Request Only
   useEffect(() => {
-    let isMounted = true;
     if (isCalling && callData && !incomingCall) {
       const currentCallId = callData.to + (callData.isVideo ? "V" : "A");
       if (initiatedCallIdRef.current === currentCallId) return;
@@ -254,9 +261,7 @@ const CallModal = ({
         isVideo: callData.isVideo,
       });
     }
-    return () => {
-      isMounted = false;
-    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCalling, callData, incomingCall, user._id]);
 
   const handleAccept = async () => {
@@ -287,11 +292,7 @@ const CallModal = ({
     if (onRejectCall) onRejectCall();
   };
 
-  const handleHangup = () => {
-    socketAPI.emit("endCall", { to: callData?.to || callData?.from });
-    cleanupCall();
-    if (onEndCall) onEndCall();
-  };
+
 
   const toggleMute = () => {
     if (localStream) {
