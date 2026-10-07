@@ -44,7 +44,7 @@ export const SendMessage = async (req, res, next) => {
   }
 };
 
-export const GetMessages = async (req, res) => {
+export const GetMessages = async (req, res, next) => {
   try {
     const { friendId } = req.params;
     const currentUser = req.user;

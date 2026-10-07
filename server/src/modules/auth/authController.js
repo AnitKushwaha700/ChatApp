@@ -7,13 +7,15 @@ import { sendEmail } from "../../shared/utils/sendEmail.js";
 // ================= REGISTER =================
 export const UserRegister = async (req, res, next) => {
   try {
-    const { fullName, email, mobileNumber, password } = req.body;
+    let { fullName, email, mobileNumber, password } = req.body;
 
     if (!fullName || !email || !mobileNumber || !password) {
       const error = new Error("All fields required");
       error.statusCode = 400;
       return next(error);
     }
+    
+    email = email.toLowerCase();
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -41,13 +43,15 @@ export const UserRegister = async (req, res, next) => {
 // ================= LOGIN =================
 export const UserLogin = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    let { email, password } = req.body;
 
     if (!email || !password) {
       const error = new Error("All fields required");
       error.statusCode = 400;
       return next(error);
     }
+    
+    email = email.toLowerCase();
 
     const existingUser = await User.findOne({ email });
     if (!existingUser) {
@@ -80,12 +84,14 @@ export const UserLogin = async (req, res, next) => {
 // ================= FORGOT PASSWORD (SEND OTP) =================
 export const ForgotPassword = async (req, res, next) => {
   try {
-    const { email } = req.body;
+    let { email } = req.body;
     if (!email) {
       const error = new Error("Email is required");
       error.statusCode = 400;
       return next(error);
     }
+    
+    email = email.toLowerCase();
 
     const user = await User.findOne({ email });
     if (!user) {
@@ -120,13 +126,15 @@ export const ForgotPassword = async (req, res, next) => {
 // ================= RESET PASSWORD (VERIFY OTP & SET NEW) =================
 export const ResetPassword = async (req, res, next) => {
   try {
-    const { email, otp, newPassword } = req.body;
+    let { email, otp, newPassword } = req.body;
 
     if (!email || !otp || !newPassword) {
       const error = new Error("Email, OTP and new password are required");
       error.statusCode = 400;
       return next(error);
     }
+    
+    email = email.toLowerCase();
 
     const user = await User.findOne({ email });
     if (!user || !user.resetPasswordOTP || !user.resetPasswordExpires) {
