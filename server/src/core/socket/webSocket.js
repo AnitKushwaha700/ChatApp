@@ -1,3 +1,5 @@
+import jwt from "jsonwebtoken";
+
 export const OnlineUsers = {};
 let ioInstance = null;
 
@@ -7,19 +9,41 @@ const WebSocket = (io) => {
   ioInstance = io;
   console.log("Socket Connected");
 
+  // Authentication Middleware
+  io.use((socket, next) => {
+    try {
+      const cookieHeader = socket.handshake.headers.cookie;
+      if (!cookieHeader) return next(new Error("Authentication error"));
+
+      const tokenCookie = cookieHeader
+        .split(";")
+        .find((c) => c.trim().startsWith("token="));
+
+      if (!tokenCookie) return next(new Error("Authentication error"));
+
+      const token = tokenCookie.split("=")[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      socket.userID = decoded.userId;
+      next();
+    } catch {
+      next(new Error("Authentication error"));
+    }
+  });
+
   io.on("connection", (socket) => {
-    // We attach userID to the socket object so we can use it on disconnect
-    socket.on("createPath", (userID) => {
-      socket.userID = userID;
-      OnlineUsers[userID] = socket.id;
-      console.log("Online Users:", OnlineUsers);
-      io.emit("onlineUsers", OnlineUsers);
+    // We use the authenticated socket.userID
+    socket.on("createPath", () => {
+      if (socket.userID) {
+        OnlineUsers[socket.userID] = socket.id;
+        io.emit("onlineUsers", OnlineUsers);
+      }
     });
 
-    socket.on("destroyPath", (userID) => {
-      delete OnlineUsers[userID];
-      console.log("Online Users: ", OnlineUsers);
-      io.emit("onlineUsers", OnlineUsers);
+    socket.on("destroyPath", () => {
+      if (socket.userID) {
+        delete OnlineUsers[socket.userID];
+        io.emit("onlineUsers", OnlineUsers);
+      }
     });
 
     socket.on("disconnect", () => {
@@ -32,10 +56,10 @@ const WebSocket = (io) => {
 
     // WebRTC Signaling Flow
     // 1. Caller sends a call request (ringing)
-    socket.on("requestCall", ({ userToCall, from, name, isVideo }) => {
+    socket.on("requestCall", ({ userToCall, name, isVideo }) => {
       const receiverSocketId = OnlineUsers[userToCall];
       if (receiverSocketId) {
-        io.to(receiverSocketId).emit("incomingCall", { from, name, isVideo });
+        io.to(receiverSocketId).emit("incomingCall", { from: socket.userID, name, isVideo });
       }
     });
 

@@ -4,6 +4,22 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { sendEmail } from "../../shared/utils/sendEmail.js";
 
+// ================= LOGOUT =================
+export const UserLogout = async (req, res, next) => {
+  try {
+    const isProduction = process.env.NODE_ENV === "production";
+    res.cookie("token", "", {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+      expires: new Date(0), // Expire cookie immediately
+    });
+    res.status(200).json({ message: "Logout successful" });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ================= REGISTER =================
 export const UserRegister = async (req, res, next) => {
   try {
@@ -11,6 +27,24 @@ export const UserRegister = async (req, res, next) => {
 
     if (!fullName || !email || !mobileNumber || !password) {
       const error = new Error("All fields required");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    if (
+      typeof fullName !== "string" ||
+      typeof email !== "string" ||
+      typeof mobileNumber !== "string" ||
+      typeof password !== "string"
+    ) {
+      const error = new Error("Invalid input formats");
+      error.statusCode = 400;
+      return next(error);
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      const error = new Error("Invalid email format");
       error.statusCode = 400;
       return next(error);
     }
@@ -47,6 +81,12 @@ export const UserLogin = async (req, res, next) => {
 
     if (!email || !password) {
       const error = new Error("All fields required");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    if (typeof email !== "string" || typeof password !== "string") {
+      const error = new Error("Invalid input formats");
       error.statusCode = 400;
       return next(error);
     }
@@ -90,6 +130,12 @@ export const ForgotPassword = async (req, res, next) => {
       error.statusCode = 400;
       return next(error);
     }
+
+    if (typeof email !== "string") {
+      const error = new Error("Invalid input format");
+      error.statusCode = 400;
+      return next(error);
+    }
     
     email = email.toLowerCase();
 
@@ -100,8 +146,8 @@ export const ForgotPassword = async (req, res, next) => {
       return next(error);
     }
 
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate secure 6-digit OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
     
     // Hash OTP before saving
     const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
@@ -130,6 +176,12 @@ export const ResetPassword = async (req, res, next) => {
 
     if (!email || !otp || !newPassword) {
       const error = new Error("Email, OTP and new password are required");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    if (typeof email !== "string" || typeof otp !== "string" || typeof newPassword !== "string") {
+      const error = new Error("Invalid input formats");
       error.statusCode = 400;
       return next(error);
     }

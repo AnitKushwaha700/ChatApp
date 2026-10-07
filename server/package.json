@@ -4,9 +4,11 @@
   "description": "Mingo Chat App Backend",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "echo \"No tests configured yet\" && exit 0",
     "start": "node --dns-result-order=ipv4first index.js",
-    "dev": "nodemon --exec \"node --dns-result-order=ipv4first\" index.js"
+    "dev": "node --watch --dns-result-order=ipv4first index.js",
+    "lint": "eslint .",
+    "build": "echo \"No build required for server\" && exit 0"
   },
   "keywords": [],
   "author": "Anikett",
@@ -14,21 +16,26 @@
   "type": "module",
   "dependencies": {
     "bcrypt": "^6.0.0",
-    "cloudinary": "^1.41.3",
+    "cloudinary": "^2.11.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-mongo-sanitize": "^2.2.0",
+    "express-rate-limit": "^8.7.1",
     "google-auth-library": "^11.0.2",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.9.2",
     "morgan": "^1.11.0",
     "multer": "^2.2.0",
     "multer-storage-cloudinary": "^4.0.0",
-    "nodemailer": "^9.0.5",
+    "nodemailer": "^10.0.15",
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0"
   }
 }

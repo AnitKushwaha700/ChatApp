@@ -21,7 +21,7 @@ export const Protect = async (req, res, next) => {
 
     req.user = verifiedUser;
     next();
-  } catch (error) {
+  } catch {
     const err = new Error("Unauthorized");
     err.statusCode = 401;
     next(err);

@@ -21,6 +21,18 @@ export const SendMessage = async (req, res, next) => {
       return next(error);
     }
 
+    if (message && typeof message !== "string") {
+      const error = new Error("Invalid message format");
+      error.statusCode = 400;
+      return next(error);
+    }
+
+    if (message && message.length > 5000) {
+      const error = new Error("Message is too long");
+      error.statusCode = 400;
+      return next(error);
+    }
+
     const newMessage = await Message.create({
       senderId: currentUser._id,
       receiverId: receiverID,
@@ -40,7 +52,7 @@ export const SendMessage = async (req, res, next) => {
       .json({ message: "Message sent successfully", data: newMessage });
   } catch (error) {
     console.log(error.message);
-    next();
+    next(error);
   }
 };
 
@@ -107,6 +119,15 @@ export const DeleteMessage = async (req, res, next) => {
       }
     } else {
       // Default to "for_me"
+      if (
+        message.senderId.toString() !== currentUser._id.toString() &&
+        message.receiverId.toString() !== currentUser._id.toString()
+      ) {
+        const error = new Error("Unauthorized to delete this message");
+        error.statusCode = 403;
+        return next(error);
+      }
+
       if (!message.deletedBy.includes(currentUser._id)) {
         message.deletedBy.push(currentUser._id);
         await message.save();

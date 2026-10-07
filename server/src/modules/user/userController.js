@@ -9,11 +9,13 @@ export const getAllUsers = async (req, res, next) => {
 
     const query = { _id: { $ne: currentUser._id } };
 
-    if (search) {
+    if (search && typeof search === "string") {
+      // Escape regex special characters to prevent regex injection DOS
+      const safeSearch = search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       query.$or = [
-        { fullName: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-        { mobileNumber: { $regex: search, $options: "i" } },
+        { fullName: { $regex: safeSearch, $options: "i" } },
+        { email: { $regex: safeSearch, $options: "i" } },
+        { mobileNumber: { $regex: safeSearch, $options: "i" } },
       ];
     }
 
@@ -47,6 +49,17 @@ export const updateProfile = async (req, res, next) => {
     const currentUser = req.user;
 
     const { fullName, email, mobileNumber } = req.body;
+
+    if (
+      (fullName !== undefined && typeof fullName !== "string") ||
+      (email !== undefined && typeof email !== "string") ||
+      (mobileNumber !== undefined && typeof mobileNumber !== "string")
+    ) {
+      const error = new Error("Invalid input formats");
+      error.statusCode = 400;
+      return next(error);
+    }
+
     let profilePicUrl = undefined;
 
     if (req.file) {
@@ -89,30 +102,40 @@ export const getConversations = async (req, res, next) => {
   try {
     const currentUser = req.user;
 
-    // Find all messages where current user is sender or receiver
-    const messages = await Message.find({
-      $or: [
-        { senderId: currentUser._id },
-        { receiverId: currentUser._id },
-      ],
-    }).sort({ createdAt: -1 });
+    // Use aggregation to find distinct users we've chatted with efficiently (fixes OOM risk)
+    const conversations = await Message.aggregate([
+      {
+        $match: {
+          $or: [{ senderId: currentUser._id }, { receiverId: currentUser._id }],
+        },
+      },
+      {
+        $sort: { createdAt: -1 },
+      },
+      {
+        $group: {
+          _id: {
+            $cond: [
+              { $eq: ["$senderId", currentUser._id] },
+              "$receiverId",
+              "$senderId",
+            ],
+          },
+          lastMessageAt: { $first: "$createdAt" },
+        },
+      },
+      {
+        $sort: { lastMessageAt: -1 },
+      },
+    ]);
 
-    // Extract unique user IDs that are not the current user
-    const userIds = new Set();
-    messages.forEach((msg) => {
-      if (msg.senderId.toString() !== currentUser._id.toString()) {
-        userIds.add(msg.senderId.toString());
-      }
-      if (msg.receiverId.toString() !== currentUser._id.toString()) {
-        userIds.add(msg.receiverId.toString());
-      }
-    });
+    const userIds = conversations.map((c) => c._id);
 
     // Fetch the actual user documents
-    const users = await User.find({ _id: { $in: Array.from(userIds) } }).select("-password");
+    const users = await User.find({ _id: { $in: userIds } }).select("-password");
 
-    // Optional: Sort users by most recent message (since userIds were added in order of newest message first)
-    const sortedUsers = Array.from(userIds).map(id => users.find(u => u._id.toString() === id)).filter(Boolean);
+    // Preserve the sorted order from the aggregation
+    const sortedUsers = userIds.map(id => users.find(u => u._id.toString() === id.toString())).filter(Boolean);
 
     res.status(200).json({ data: sortedUsers });
   } catch (error) {

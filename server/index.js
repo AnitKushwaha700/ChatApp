@@ -13,6 +13,8 @@ import UserRouter from "./src/modules/user/userRouter.js";
 import http from "http";
 import { Server } from "socket.io";
 import websocket from "./src/core/socket/webSocket.js";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 
 const app = express();
 
@@ -24,6 +26,14 @@ const allowedOrigins = [
 ].filter(Boolean); // Remove undefined values
 
 // Middlewares
+app.use(helmet());
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // Limit each IP to 200 requests per window
+  message: { success: false, message: "Too many requests from this IP, please try again later" },
+});
+app.use(limiter);
+
 app.use(
   cors({
     origin: function (origin, callback) {
@@ -60,9 +70,14 @@ app.get("/", (req, res) => {
 });
 
 // Global error handler
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   const statusCode = err.statusCode || 500;
-  const message = err.message || "Internal Server Error";
+  let message = err.message || "Internal Server Error";
+  
+  if (process.env.NODE_ENV === "production" && statusCode === 500) {
+    message = "Internal Server Error";
+  }
+
   console.error("❌ Error:", err);
   res.status(statusCode).json({ success: false, message });
 });
