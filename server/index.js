@@ -20,7 +20,8 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "https://chat-app-anikett78.vercel.app",
-];
+  process.env.CLIENT_URL, // Allow dynamic frontend URL from environment
+].filter(Boolean); // Remove undefined values
 
 // Middlewares
 app.use(
