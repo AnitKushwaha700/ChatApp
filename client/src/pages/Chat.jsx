@@ -55,6 +55,9 @@ const Chat = () => {
 
   useEffect(() => {
     if (isLogin && user) {
+      if (!socketAPI.connected) {
+        socketAPI.connect();
+      }
       socketAPI.emit("createPath", user._id);
     }
   }, [isLogin, user]);
@@ -68,6 +71,7 @@ const Chat = () => {
     } catch (error) {
       console.error("Logout failed", error);
     }
+    socketAPI.disconnect();
     setUser(null);
     sessionStorage.removeItem("AppUser");
     setIsLogin(false);
@@ -142,11 +146,7 @@ const Chat = () => {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex p-4 gap-2 border-b border-base-content/10">
-          <button className="flex-1 bg-primary text-primary-content py-1.5 rounded-md text-sm font-medium shadow-sm">Chats</button>
-          <button className="flex-1 text-base-content/70 hover:bg-base-content/10 py-1.5 rounded-md text-sm font-medium transition-colors">Contacts</button>
-        </div>
+
 
         {/* User List */}
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
@@ -177,13 +177,11 @@ const Chat = () => {
                 <h4 className="text-base-content text-sm font-medium truncate">{u.fullName || u.email}</h4>
               </div>
               <div className="shrink-0 flex items-center">
-                {user?.pendingRequests?.includes(u._id) ? (
-                  <span className="badge badge-error badge-sm text-[10px] uppercase font-bold px-2 py-2">Request</span>
-                ) : user?.friends?.includes(u._id) && u.unreadCount > 0 ? (
+                {u.unreadCount > 0 && (
                   <span className="w-5 h-5 rounded-full bg-primary text-primary-content text-[10px] flex items-center justify-center font-bold shadow-sm">
                     {u.unreadCount > 99 ? '99+' : u.unreadCount}
                   </span>
-                ) : null}
+                )}
               </div>
             </div>
           ))}

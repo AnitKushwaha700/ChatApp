@@ -1,7 +1,9 @@
 @import "tailwindcss";
 
-body {
+html, body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro", "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    overflow-x: hidden;
+    width: 100%;
 }
 
 @plugin "flyonui" {

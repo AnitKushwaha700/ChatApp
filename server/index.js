@@ -26,7 +26,10 @@ const allowedOrigins = [
 ].filter(Boolean); // Remove undefined values
 
 // Middlewares
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: false,
+  crossOriginOpenerPolicy: false
+}));
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 200, // Limit each IP to 200 requests per window

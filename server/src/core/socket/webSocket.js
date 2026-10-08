@@ -23,7 +23,7 @@ const WebSocket = (io) => {
 
       const token = tokenCookie.split("=")[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      socket.userID = decoded.userId;
+      socket.userID = decoded._id;
       next();
     } catch {
       next(new Error("Authentication error"));

@@ -97,7 +97,7 @@ const SiteHeader = () => {
         <select
           name="theme"
           id="theme"
-          className="select select-xs sm:select-sm select-bordered w-20 sm:w-full max-w-25 sm:max-w-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
+          className="select select-xs sm:select-sm select-bordered w-[80px] sm:w-full max-w-[100px] sm:max-w-xs shrink-0 focus:outline-none focus:ring-1 focus:ring-primary/50"
           value={selectedTheme}
           onChange={handleThemeChange}
         >

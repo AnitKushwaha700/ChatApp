@@ -104,35 +104,7 @@ const Chatting = ({
   const timerRef = useRef(null);
   const attachmentRef = useRef(null);
 
-  const handleSendRequest = async () => {
-    try {
-      const res = await api.post(`/user/request/${selectedFriend._id}`);
-      setUser(res.data.data);
-      sessionStorage.setItem("AppUser", JSON.stringify(res.data.data));
-    } catch (error) {
-      console.error("Failed to send request", error);
-    }
-  };
 
-  const handleAcceptRequest = async () => {
-    try {
-      const res = await api.post(`/user/accept/${selectedFriend._id}`);
-      setUser(res.data.data);
-      sessionStorage.setItem("AppUser", JSON.stringify(res.data.data));
-    } catch (error) {
-      console.error("Failed to accept request", error);
-    }
-  };
-
-  const handleDeclineRequest = async () => {
-    try {
-      const res = await api.post(`/user/decline/${selectedFriend._id}`);
-      setUser(res.data.data);
-      sessionStorage.setItem("AppUser", JSON.stringify(res.data.data));
-    } catch (error) {
-      console.error("Failed to decline request", error);
-    }
-  };
 
   const fetchChatData = async () => {
     try {
@@ -442,11 +414,7 @@ const Chatting = ({
     }
   };
 
-  const isFriend = user?.friends?.includes(selectedFriend?._id);
-  const isRequestSent = user?.sentRequests?.includes(selectedFriend?._id);
-  const isRequestReceived = user?.pendingRequests?.includes(
-    selectedFriend?._id,
-  );
+
 
   return (
     <div className="flex flex-col h-full w-full relative">
@@ -640,64 +608,7 @@ const Chatting = ({
         </div>
       )}
 
-      {/* Connection UI or Chat */}
-      {!isFriend ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-          <div className="w-24 h-24 rounded-full bg-base-200 flex items-center justify-center mb-4">
-            <UserPlus className="w-10 h-10 text-base-content/50" />
-          </div>
-          <h3 className="text-xl font-semibold mb-2">
-            Connect with {selectedFriend?.fullName}
-          </h3>
-
-          {filteredChatData.length > 0 &&
-          filteredChatData[filteredChatData.length - 1].message.includes(
-            "declined",
-          ) ? (
-            <p className="text-error font-medium text-sm mb-6 max-w-md px-4 py-2 bg-error/10 rounded-lg">
-              {filteredChatData[filteredChatData.length - 1].message}
-            </p>
-          ) : (
-            <p className="text-base-content/70 text-sm mb-6 max-w-md">
-              You must be friends to chat. Send a request to start
-              communicating!
-            </p>
-          )}
-
-          {isRequestSent ? (
-            <button
-              disabled
-              className="btn btn-primary opacity-50 cursor-not-allowed px-8"
-            >
-              Request Sent...
-            </button>
-          ) : isRequestReceived ? (
-            <div className="flex gap-4">
-              <button
-                onClick={handleAcceptRequest}
-                className="btn btn-success text-success-content px-8"
-              >
-                Accept
-              </button>
-              <button
-                onClick={handleDeclineRequest}
-                className="btn btn-error text-error-content px-8"
-              >
-                Decline
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={handleSendRequest}
-              className="btn btn-primary px-8"
-            >
-              Send Chat Request
-            </button>
-          )}
-        </div>
-      ) : (
-        <>
-          {/* Messages */}
+      {/* Messages */}
           <div className="flex-1 relative overflow-hidden chat-background">
             <div className="absolute inset-0 overflow-y-auto p-4 space-y-4 custom-scrollbar">
             {(() => {
@@ -911,15 +822,7 @@ const Chatting = ({
                       </div>{" "}
                       Audio
                     </button>
-                    <button
-                      type="button"
-                      className="flex items-center gap-4 hover:bg-base-200 p-2.5 rounded-xl transition-all text-left text-sm font-medium text-base-content opacity-50 cursor-not-allowed"
-                    >
-                      <div className="bg-[#34C759] text-white p-2.5 rounded-full shadow-sm">
-                        <UserPlus size={18} />
-                      </div>{" "}
-                      Contact
-                    </button>
+
                   </div>
                 )}
 
@@ -1000,8 +903,7 @@ const Chatting = ({
               )}
             </form>
           </div>
-        </>
-      )}
+
     </div>
   );
 };

@@ -75,7 +75,7 @@ const Home = () => {
 
         <motion.h1
           variants={itemVariants}
-          className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 text-base-content"
+          className="text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight mb-6 text-base-content"
         >
           Connect with{" "}
           <span className="bg-clip-text text-transparent bg-linear-to-r from-primary to-secondary">
