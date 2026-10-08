@@ -395,7 +395,7 @@ const Chatting = ({
           <img
             src={getMediaUrl(chat.mediaUrl)}
             alt="Attachment"
-            className="max-w-[240px] sm:max-w-[300px] h-auto rounded-lg object-cover"
+            className="max-w-60 sm:max-w-75 h-auto rounded-lg object-cover"
           />
           {chat.message && chat.message !== "Sent an attachment" && (
             <p className="text-sm mt-2 px-1">{chat.message}</p>
@@ -404,7 +404,7 @@ const Chatting = ({
       );
     } else if (chat.messageType === "audio" && chat.mediaUrl) {
       return (
-        <div className="flex flex-col gap-1 w-[240px] mt-1">
+        <div className="flex flex-col gap-1 w-60 mt-1">
           <audio
             controls
             src={getMediaUrl(chat.mediaUrl)}
@@ -418,7 +418,7 @@ const Chatting = ({
           <video
             controls
             src={getMediaUrl(chat.mediaUrl)}
-            className="max-w-[240px] sm:max-w-[300px] rounded-lg object-cover"
+            className="max-w-60 sm:max-w-75 rounded-lg object-cover"
           />
         </div>
       );
@@ -535,7 +535,7 @@ const Chatting = ({
 
       {/* Theme Modal */}
       {isThemeModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
           <div className="bg-base-100 p-6 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 border border-base-content/5">
             <div className="flex justify-between items-center mb-1">
               <div className="flex items-center gap-2">
@@ -603,7 +603,7 @@ const Chatting = ({
                   )}
                   
                   {/* Decorative background element to show off base-200/base-300 */}
-                  <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-base-200 to-transparent -z-0 opacity-80"></div>
+                  <div className="absolute right-0 top-0 bottom-0 w-32 bg-linear-to-l from-base-200 to-transparent z-0 opacity-80"></div>
                 </button>
               )})}
             </div>
@@ -613,7 +613,7 @@ const Chatting = ({
 
       {/* Clear Chat Confirmation Modal */}
       {isClearChatModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4">
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 px-4">
           <div className="bg-base-100 p-6 rounded-2xl shadow-xl w-full max-w-sm flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="font-semibold text-lg text-base-content mb-2">
               Clear Chat?
@@ -757,12 +757,12 @@ const Chatting = ({
                       </div>
                       <div
                         onDoubleClick={() => setShowDeleteModal(chat._id)}
-                        className={`chat-bubble relative cursor-pointer shadow-sm ${isMediaOnly ? "!p-1.5" : ""} ${isMe ? "bg-[#dcf8c6] text-black" : "bg-white text-black"} ${emojiOnly ? "!bg-transparent !shadow-none text-5xl p-0" : ""}`}
+                        className={`chat-bubble relative cursor-pointer shadow-sm ${isMediaOnly ? "p-1.5!" : ""} ${isMe ? "bg-[#dcf8c6] text-black" : "bg-white text-black"} ${emojiOnly ? "bg-transparent! shadow-none! text-5xl p-0" : ""}`}
                       >
                         <div
                           className={`flex flex-wrap items-end gap-x-3 gap-y-1 ${emojiOnly ? "flex-col" : ""}`}
                         >
-                          <div className={emojiOnly ? "mb-2" : "break-words"}>
+                          <div className={emojiOnly ? "mb-2" : "wrap-break-word"}>
                             {renderMessageContent(chat, emojiOnly)}
                           </div>
 
@@ -799,7 +799,7 @@ const Chatting = ({
                       </div>
 
                       {showDeleteModal === chat._id && (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4">
+                        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 px-4">
                           <div className="delete-modal bg-base-100 p-6 rounded-2xl shadow-xl w-full max-w-sm flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200">
                             <h3 className="font-semibold text-lg text-base-content mb-2">
                               Delete message?

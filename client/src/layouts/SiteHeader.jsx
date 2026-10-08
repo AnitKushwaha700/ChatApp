@@ -35,7 +35,7 @@ const SiteHeader = () => {
   return (
     <div className="h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-base-100/80 backdrop-blur-md sticky top-0 z-40 border-b border-base-200 shadow-sm flex items-center justify-between px-4 sm:px-6">
       <h1
-        className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary cursor-pointer hover:opacity-80 transition-opacity"
+        className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-linear-to-r from-primary to-secondary cursor-pointer hover:opacity-80 transition-opacity"
         onClick={() => navigate("/")}
       >
         ChatApp
@@ -56,7 +56,7 @@ const SiteHeader = () => {
               <ChevronDown className="w-4 h-4 text-base-content/60" />
             </summary>
             <ul
-              className="dropdown-content absolute z-[100] menu p-2 shadow-2xl bg-base-100 rounded-box w-52 mt-4 border border-base-200"
+              className="dropdown-content absolute z-100 menu p-2 shadow-2xl bg-base-100 rounded-box w-52 mt-4 border border-base-200"
             >
               <li className="mb-1">
                 <a onClick={() => navigate("/dashboard")} className="flex items-center gap-2 hover:bg-base-200">
@@ -97,7 +97,7 @@ const SiteHeader = () => {
         <select
           name="theme"
           id="theme"
-          className="select select-xs sm:select-sm select-bordered w-20 sm:w-full max-w-[100px] sm:max-w-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
+          className="select select-xs sm:select-sm select-bordered w-20 sm:w-full max-w-25 sm:max-w-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
           value={selectedTheme}
           onChange={handleThemeChange}
         >

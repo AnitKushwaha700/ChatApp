@@ -124,7 +124,7 @@ const Chat = () => {
   const displayUsers = recentUser;
 
   return (
-    <div className="flex h-[100dvh] bg-base-100 overflow-hidden text-base-content">
+    <div className="flex h-dvh bg-base-100 overflow-hidden text-base-content">
       {/* Sidebar */}
       <div className={`${selectedFriend ? 'hidden md:flex' : 'flex'} w-full md:w-80 bg-base-200 flex-col h-full border-r border-base-content/10 shrink-0`}>
         
@@ -208,7 +208,7 @@ const Chat = () => {
               <div className="absolute top-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-base-200"></div>
             </div>
             <div>
-              <h3 className="font-semibold text-sm truncate max-w-[100px]">{user?.fullName || user?.email}</h3>
+              <h3 className="font-semibold text-sm truncate max-w-25">{user?.fullName || user?.email}</h3>
               <p className="text-xs text-base-content/70">Online</p>
             </div>
           </div>
@@ -228,7 +228,7 @@ const Chat = () => {
 
       {/* Logout Modal */}
       {isLogoutModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4">
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 px-4">
           <div className="bg-base-100 p-6 rounded-2xl shadow-xl w-full max-w-sm flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200">
             <h3 className="font-semibold text-lg text-base-content mb-2">Confirm Logout</h3>
             <p className="text-base-content/70 text-sm">Are you sure you want to logout?</p>

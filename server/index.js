@@ -78,7 +78,11 @@ app.use((err, req, res, _next) => {
     message = "Internal Server Error";
   }
 
-  console.error("❌ Error:", err);
+  if (statusCode === 500) {
+    console.error("❌ Error:", err);
+  } else {
+    console.warn(`⚠️ Client Error (${statusCode}):`, err.message);
+  }
   res.status(statusCode).json({ success: false, message });
 });
 

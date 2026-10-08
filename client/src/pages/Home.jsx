@@ -46,7 +46,7 @@ const Home = () => {
             rotate: [0, 90, 0],
           }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] rounded-full bg-primary/20 blur-[100px]"
+          className="absolute top-[20%] left-[10%] w-[50%] h-[50%] rounded-full bg-primary/20 blur-[100px]"
         />
         <motion.div
           animate={{
@@ -54,7 +54,7 @@ const Home = () => {
             rotate: [0, -90, 0],
           }}
           transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute bottom-[10%] -right-[10%] w-[40%] h-[40%] rounded-full bg-secondary/20 blur-[100px]"
+          className="absolute bottom-[10%] right-[10%] w-[40%] h-[40%] rounded-full bg-secondary/20 blur-[100px]"
         />
       </div>
 
@@ -78,7 +78,7 @@ const Home = () => {
           className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 text-base-content"
         >
           Connect with{" "}
-          <span className="text-primary bg-clip-text text-transparent bg-gradient-to-r from-primary to-secondary">
+          <span className="bg-clip-text text-transparent bg-linear-to-r from-primary to-secondary">
             Anyone
           </span>
           ,<br />

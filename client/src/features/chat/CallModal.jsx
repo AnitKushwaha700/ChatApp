@@ -317,7 +317,7 @@ const CallModal = ({
   if (!isCalling && !incomingCall && callStatus !== "active") return null;
 
   return (
-    <div className="fixed inset-0 z-[200] bg-black/90 flex flex-col items-center justify-center p-4">
+    <div className="fixed inset-0 z-200 bg-black/90 flex flex-col items-center justify-center p-4">
       {/* Remote Video / Status */}
       <div className="relative w-full max-w-4xl h-[60vh] sm:h-[80vh] bg-base-300 rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center border border-white/10">
         {callStatus === "incoming" && (

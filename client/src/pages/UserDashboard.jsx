@@ -106,7 +106,7 @@ const UserDashboard = () => {
         className="container mx-auto max-w-3xl relative z-10"
       >
         <div className="text-center mb-10">
-          <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary mb-3">
+          <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-linear-to-r from-primary to-secondary mb-3">
             Your Dashboard
           </h1>
           <p className="text-base-content/60 text-lg">Manage your profile and account settings.</p>
@@ -126,7 +126,7 @@ const UserDashboard = () => {
 
         <div className="card bg-base-100/70 backdrop-blur-xl shadow-2xl border border-white/10 overflow-hidden">
           {/* Cover photo area */}
-          <div className="h-32 bg-gradient-to-r from-primary/20 to-secondary/20 relative flex justify-center">
+          <div className="h-32 bg-linear-to-r from-primary/20 to-secondary/20 relative flex justify-center">
             <div className="absolute -bottom-12">
               <div className="w-24 h-24 rounded-full bg-primary text-primary-content flex items-center justify-center shadow-xl ring ring-base-100 ring-offset-2 ring-offset-base-100">
                 <span className="text-4xl font-bold leading-none">{userInitial}</span>
