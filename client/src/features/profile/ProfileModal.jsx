@@ -17,12 +17,20 @@ const ProfileModal = ({ isOpen, onClose }) => {
     user?.profilePic ? (user.profilePic.startsWith("http") ? user.profilePic : `${api.defaults.baseURL}${user.profilePic}`) : null
   );
   const [loading, setLoading] = useState(false);
+  const [selectedTheme, setSelectedTheme] = useState(() => localStorage.getItem("theme") || "light");
   const fileInputRef = useRef(null);
 
   if (!isOpen) return null;
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleThemeChange = (e) => {
+    const theme = e.target.value;
+    setSelectedTheme(theme);
+    localStorage.setItem("theme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
   };
 
   const handleFileChange = (e) => {
@@ -147,6 +155,24 @@ const ProfileModal = ({ isOpen, onClose }) => {
                 onChange={handleChange}
                 className="input input-bordered w-full"
               />
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">App Theme</span>
+              </label>
+              <select
+                name="theme"
+                className="select select-bordered w-full"
+                value={selectedTheme}
+                onChange={handleThemeChange}
+              >
+                {["light", "dark", "black", "spotify", "claude", "corporate", "ghibli", "pastel"].map(theme => (
+                  <option key={theme} value={theme}>
+                    {theme.charAt(0).toUpperCase() + theme.slice(1)}
+                  </option>
+                ))}
+              </select>
             </div>
           </form>
         </div>

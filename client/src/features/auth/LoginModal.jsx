@@ -193,7 +193,6 @@ const LoginModal = () => {
             <GoogleLogin
               onSuccess={handleGoogleSuccess}
               onError={handleGoogleError}
-              useOneTap
               theme={localStorage.getItem("theme") === "dark" || localStorage.getItem("theme") === "black" ? "filled_black" : "outline"}
               shape="rectangular"
               text="continue_with"

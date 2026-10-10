@@ -7,20 +7,11 @@ import { LogOut, LayoutDashboard, ChevronDown } from "lucide-react";
 const SiteHeader = () => {
   const { user, isLogin, setUser, setIsLogin } = useAuth();
   const navigate = useNavigate();
-  const [selectedTheme, setSelectedTheme] = useState(() => localStorage.getItem("theme") || "light");
   const { openLogin, openRegister } = useModal();
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") || "light";
     document.documentElement.setAttribute("data-theme", savedTheme);
   }, []);
-
-
-  const handleThemeChange = (e) => {
-    const theme = e.target.value;
-    setSelectedTheme(theme);
-    localStorage.setItem("theme", theme);
-    document.documentElement.setAttribute("data-theme", theme);
-  };
 
   const handleLogout = () => {
     setUser(null);
@@ -35,7 +26,7 @@ const SiteHeader = () => {
   return (
     <div className="h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-base-100/80 backdrop-blur-md sticky top-0 z-40 border-b border-base-200 shadow-sm flex items-center justify-between px-4 sm:px-6">
       <h1
-        className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-linear-to-r from-primary to-secondary cursor-pointer hover:opacity-80 transition-opacity"
+        className="text-xl sm:text-3xl font-black text-transparent bg-clip-text bg-linear-to-r from-primary to-secondary cursor-pointer hover:opacity-80 transition-opacity"
         onClick={() => navigate("/")}
       >
         ChatApp
@@ -76,37 +67,21 @@ const SiteHeader = () => {
             </ul>
           </details>
         ) : (
-          <div className="flex gap-1 sm:gap-2">
+          <div className="flex gap-2 sm:gap-3 shrink-0">
             <button
-              className="btn btn-xs sm:btn-sm btn-ghost hover:bg-primary/10 hover:text-primary font-medium px-2 sm:px-3"
+              className="btn btn-sm sm:btn-md btn-ghost hover:bg-primary/10 hover:text-primary font-medium px-3 sm:px-5 rounded-full"
               onClick={openLogin}
             >
               Login
             </button>
             <button
-              className="btn btn-xs sm:btn-sm btn-primary shadow-sm px-2 sm:px-3"
+              className="btn btn-sm sm:btn-md btn-primary shadow-sm px-3 sm:px-5 rounded-full"
               onClick={openRegister}
             >
               Register
             </button>
           </div>
         )}
-
-        <div className="h-6 w-px bg-base-300 hidden sm:block"></div>
-
-        <select
-          name="theme"
-          id="theme"
-          className="select select-xs sm:select-sm select-bordered w-[80px] sm:w-full max-w-[100px] sm:max-w-xs shrink-0 focus:outline-none focus:ring-1 focus:ring-primary/50"
-          value={selectedTheme}
-          onChange={handleThemeChange}
-        >
-          {["light", "dark", "black", "spotify", "claude", "corporate", "ghibli", "pastel"].map(theme => (
-            <option key={theme} value={theme}>
-              {theme.charAt(0).toUpperCase() + theme.slice(1)}
-            </option>
-          ))}
-        </select>
       </div>
     </div>
   );

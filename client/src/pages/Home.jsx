@@ -75,7 +75,7 @@ const Home = () => {
 
         <motion.h1
           variants={itemVariants}
-          className="text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight mb-6 text-base-content"
+          className="text-3xl sm:text-5xl md:text-7xl font-extrabold tracking-tight mb-4 sm:mb-6 text-base-content leading-tight px-2 sm:px-0"
         >
           Connect with{" "}
           <span className="bg-clip-text text-transparent bg-linear-to-r from-primary to-secondary">
@@ -87,7 +87,7 @@ const Home = () => {
 
         <motion.p
           variants={itemVariants}
-          className="text-xl text-base-content/70 mb-10 max-w-2xl mx-auto"
+          className="text-base sm:text-xl text-base-content/70 mb-8 sm:mb-10 max-w-2xl mx-auto px-4 sm:px-0"
         >
           Experience lightning-fast, secure, and beautiful conversations. Join
           our community and start chatting today.
@@ -100,59 +100,14 @@ const Home = () => {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="btn btn-primary btn-lg shadow-xl shadow-primary/30 w-full sm:w-auto"
+            className="btn btn-primary btn-lg shadow-xl shadow-primary/30 w-full sm:w-auto rounded-full"
             onClick={openLogin}
           >
             Start Chatting Now
           </motion.button>
         </motion.div>
 
-        {/* Features Grid */}
-        <motion.div
-          variants={containerVariants}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left"
-        >
-          <motion.div
-            variants={itemVariants}
-            className="card bg-base-100/60 backdrop-blur-md shadow-xl border border-white/10"
-          >
-            <div className="card-body">
-              <Zap className="text-primary mb-2" size={32} />
-              <h3 className="card-title">Lightning Fast</h3>
-              <p className="text-base-content/70">
-                Real-time messaging with zero latency. Feel the speed in every
-                keystroke.
-              </p>
-            </div>
-          </motion.div>
 
-          <motion.div
-            variants={itemVariants}
-            className="card bg-base-100/60 backdrop-blur-md shadow-xl border border-white/10"
-          >
-            <div className="card-body">
-              <Shield className="text-secondary mb-2" size={32} />
-              <h3 className="card-title">Secure</h3>
-              <p className="text-base-content/70">
-                Your conversations are protected with industry-standard
-                encryption.
-              </p>
-            </div>
-          </motion.div>
-
-          <motion.div
-            variants={itemVariants}
-            className="card bg-base-100/60 backdrop-blur-md shadow-xl border border-white/10"
-          >
-            <div className="card-body">
-              <Users className="text-accent mb-2" size={32} />
-              <h3 className="card-title">Community</h3>
-              <p className="text-base-content/70">
-                Connect with thousands of users in our growing ecosystem.
-              </p>
-            </div>
-          </motion.div>
-        </motion.div>
       </motion.div>
     </div>
   );
