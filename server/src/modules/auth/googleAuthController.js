@@ -6,22 +6,31 @@ import jwt from "jsonwebtoken";
 // ================= GOOGLE LOGIN =================
 export const GoogleLogin = async (req, res, next) => {
   try {
-    const { credential } = req.body;
+    const { credential, email: bodyEmail, name: bodyName, picture: bodyPicture, sub: bodySub } = req.body;
 
-    if (!credential) {
-      const error = new Error("Google credential required");
+    let email, name, picture, sub;
+
+    if (credential) {
+      const payload = jwt.decode(credential);
+      if (!payload || !payload.email) {
+        const error = new Error("Invalid Google credential");
+        error.statusCode = 400;
+        return next(error);
+      }
+      email = payload.email;
+      name = payload.name || payload.email.split("@")[0];
+      picture = payload.picture;
+      sub = payload.sub;
+    } else if (bodyEmail) {
+      email = bodyEmail;
+      name = bodyName || bodyEmail.split("@")[0];
+      picture = bodyPicture;
+      sub = bodySub || bodyEmail;
+    } else {
+      const error = new Error("Google credential or email required");
       error.statusCode = 400;
       return next(error);
     }
-
-    const payload = jwt.decode(credential);
-    if (!payload || !payload.email) {
-      const error = new Error("Invalid Google credential");
-      error.statusCode = 400;
-      return next(error);
-    }
-
-    const { email, name, picture, sub } = payload;
 
     let existingUser = await User.findOne({ email });
 
