@@ -33,13 +33,33 @@ const GoogleAuthButton = ({
       );
 
       // Authenticate with backend API
-      const res = await api.post("/auth/google", {
-        email: userInfo.email,
-        name: userInfo.name,
-        picture: userInfo.picture,
-        sub: userInfo.sub,
-        access_token: tokenResponse.access_token,
-      });
+      let res;
+      try {
+        res = await api.post("/auth/google", {
+          email: userInfo.email,
+          name: userInfo.name,
+          picture: userInfo.picture,
+          sub: userInfo.sub,
+          access_token: tokenResponse.access_token,
+        });
+      } catch (postErr) {
+        // Fallback to Vite proxy if direct connection encounters network/reset error
+        if (postErr?.message?.includes("Network Error") || !postErr.response) {
+          res = await axios.post(
+            "/auth/google",
+            {
+              email: userInfo.email,
+              name: userInfo.name,
+              picture: userInfo.picture,
+              sub: userInfo.sub,
+              access_token: tokenResponse.access_token,
+            },
+            { withCredentials: true }
+          );
+        } else {
+          throw postErr;
+        }
+      }
 
       toast.success(res.data.message || "Signed in with Google successfully!");
       sessionStorage.setItem("AppUser", JSON.stringify(res.data.data));
@@ -95,38 +115,45 @@ const GoogleAuthButton = ({
       onClick={handleClick}
       disabled={disabled || isLoading}
       aria-label={text}
-      className={`group relative flex w-full items-center justify-center gap-3 h-11 px-4 rounded-xl border border-base-300 bg-base-100 hover:bg-base-200/80 active:bg-base-300/60 text-base-content font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md hover:border-primary/40 active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-primary/40 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer select-none ${className}`}
+      className={`group relative flex w-full items-center justify-center gap-3 h-12 px-5 rounded-xl border border-base-content/15 bg-base-200/60 hover:bg-base-200 active:bg-base-300/80 text-base-content font-semibold text-sm sm:text-base transition-all duration-200 shadow-xs hover:shadow-md hover:shadow-primary/5 hover:border-primary/50 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-primary/40 focus:outline-none disabled:opacity-50 disabled:pointer-events-none cursor-pointer select-none overflow-hidden ${className}`}
     >
+      {/* Subtle hover shimmer light effect */}
+      <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full bg-linear-to-r from-transparent via-base-content/5 to-transparent transition-transform duration-700 ease-in-out pointer-events-none" />
+
       {isLoading ? (
-        <>
+        <div className="flex items-center gap-2.5">
           <span className="loading loading-spinner loading-sm text-primary"></span>
-          <span className="text-base-content/80 font-medium">Connecting with Google...</span>
-        </>
+          <span className="text-base-content/80 font-medium text-sm">
+            Connecting with Google...
+          </span>
+        </div>
       ) : (
         <>
-          <svg
-            className="w-5 h-5 shrink-0 transition-transform duration-200 group-hover:scale-110"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              fill="#4285F4"
-              d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.03h3.88c2.28-2.1 3.66-5.2 3.66-9.12z"
-            />
-            <path
-              fill="#34A853"
-              d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.03c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.26 21.36 7.33 24 12 24z"
-            />
-            <path
-              fill="#FBBC05"
-              d="M5.28 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.13z"
-            />
-            <path
-              fill="#EA4335"
-              d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.13c.95-2.83 3.6-4.96 6.72-4.96z"
-            />
-          </svg>
-          <span className="text-base-content/90 font-medium tracking-wide">
+          <div className="flex items-center justify-center w-5 h-5 shrink-0 transition-transform duration-200 group-hover:scale-110">
+            <svg
+              className="w-5 h-5"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                fill="#4285F4"
+                d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3.03h3.88c2.28-2.1 3.66-5.2 3.66-9.12z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.03c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.13C3.26 21.36 7.33 24 12 24z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.28 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.13z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.13c.95-2.83 3.6-4.96 6.72-4.96z"
+              />
+            </svg>
+          </div>
+          <span className="text-base-content/90 font-medium tracking-wide group-hover:text-base-content transition-colors">
             {text}
           </span>
         </>

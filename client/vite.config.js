@@ -7,7 +7,17 @@ import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig({
   server: {
     headers: {
-      "Cross-Origin-Opener-Policy": "unsafe-none",
+      "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+    },
+    proxy: {
+      "/auth": {
+        target: "http://127.0.0.1:4500",
+        changeOrigin: true,
+      },
+      "/user": {
+        target: "http://127.0.0.1:4500",
+        changeOrigin: true,
+      },
     },
   },
   plugins: [

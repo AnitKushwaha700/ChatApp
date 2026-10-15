@@ -6,7 +6,7 @@ import { useAuth } from "./AuthContext";
 import { motion } from "motion/react";
 import { X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { GoogleLogin } from "@react-oauth/google";
+import GoogleAuthButton from "../../components/ui/GoogleAuthButton";
 
 const RegisterModal = () => {
   const { closeRegister, openLogin } = useModal();
@@ -88,28 +88,6 @@ const RegisterModal = () => {
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse) => {
-    try {
-      setIsLoading(true);
-      const res = await api.post("/auth/google", { credential: credentialResponse.credential });
-      toast.success(res.data.message);
-      sessionStorage.setItem("AppUser", JSON.stringify(res.data.data));
-      setUser(res.data.data);
-      setIsLogin(true);
-      handleClearForm();
-      closeRegister();
-      navigate("/chat");
-    } catch (error) {
-      console.log(error);
-      toast.error(error?.response?.data?.message || "Google Login failed");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleError = () => {
-    toast.error("Google Login Failed");
-  };
 
   return (
     <motion.div
@@ -146,7 +124,7 @@ const RegisterModal = () => {
                 value={formData.fullName}
                 onChange={handleChange}
                 disabled={isLoading}
-                className="input input-bordered w-full bg-base-200/50"
+                className="input input-bordered w-full h-11 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors"
               />
               {validationError.fullName && (
                 <p className="text-error text-xs mt-1">{validationError.fullName}</p>
@@ -162,7 +140,7 @@ const RegisterModal = () => {
                 value={formData.email}
                 onChange={handleChange}
                 disabled={isLoading}
-                className="input input-bordered w-full bg-base-200/50"
+                className="input input-bordered w-full h-11 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors"
               />
               {validationError.email && (
                 <p className="text-error text-xs mt-1">{validationError.email}</p>
@@ -180,7 +158,7 @@ const RegisterModal = () => {
               value={formData.mobileNumber}
               onChange={handleChange}
               disabled={isLoading}
-              className="input input-bordered w-full bg-base-200/50"
+              className="input input-bordered w-full h-11 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors"
             />
             {validationError.mobileNumber && (
               <p className="text-error text-xs mt-1">{validationError.mobileNumber}</p>
@@ -197,7 +175,7 @@ const RegisterModal = () => {
                 value={formData.password}
                 onChange={handleChange}
                 disabled={isLoading}
-                className="input input-bordered w-full bg-base-200/50"
+                className="input input-bordered w-full h-11 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors"
               />
             </div>
 
@@ -210,7 +188,7 @@ const RegisterModal = () => {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 disabled={isLoading}
-                className="input input-bordered w-full bg-base-200/50"
+                className="input input-bordered w-full h-11 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors"
               />
               {validationError.confirmPassword && (
                 <p className="text-error text-xs mt-1">{validationError.confirmPassword}</p>
@@ -222,10 +200,13 @@ const RegisterModal = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="btn btn-primary w-full text-white shadow-lg shadow-primary/30"
+              className="btn btn-primary w-full h-12 rounded-xl text-primary-content font-semibold text-base shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {isLoading ? (
-                <span className="loading loading-spinner loading-sm"></span>
+                <div className="flex items-center gap-2">
+                  <span className="loading loading-spinner loading-sm"></span>
+                  <span>Creating Account...</span>
+                </div>
               ) : (
                 "Create Account"
               )}
@@ -233,19 +214,14 @@ const RegisterModal = () => {
           </div>
         </form>
 
-        <div className="divider my-6 text-base-content/50 text-sm">OR CONTINUE WITH</div>
-
-        <div className="w-full h-11 flex justify-center items-center overflow-hidden rounded-lg">
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={handleGoogleError}
-            theme={localStorage.getItem("theme") === "dark" || localStorage.getItem("theme") === "black" ? "filled_black" : "outline"}
-            shape="rectangular"
-            text="continue_with"
-            size="large"
-            width="320"
-          />
+        <div className="divider my-6 text-base-content/40 text-xs font-semibold tracking-wider uppercase">
+          OR CONTINUE WITH
         </div>
+
+        <GoogleAuthButton
+          text="Continue with Google"
+          onSuccessCallback={handleClearForm}
+        />
 
         <div className="mt-6 text-center">
           <p className="text-sm text-base-content/60">
