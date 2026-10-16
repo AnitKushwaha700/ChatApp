@@ -172,10 +172,7 @@ const LoginModal = () => {
             OR CONTINUE WITH
           </div>
 
-          <GoogleAuthButton
-            text="Continue with Google"
-            onSuccessCallback={handleClearForm}
-          />
+          <GoogleAuthButton disabled={loading} onSuccess={handleClearForm} />
 
         <div className="mt-6 text-center">
           <p className="text-sm text-base-content/60">
