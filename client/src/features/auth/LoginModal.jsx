@@ -6,7 +6,7 @@ import { useModal } from "../../context/ModalContext";
 import { motion } from "motion/react";
 import { X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { GoogleLogin } from "@react-oauth/google";
+import GoogleAuthButton from "../../components/ui/GoogleAuthButton";
 
 const LoginModal = () => {
   const { setUser, setIsLogin } = useAuth();
@@ -81,27 +81,10 @@ const LoginModal = () => {
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse) => {
-    try {
-      setLoading(true);
-      const res = await api.post("/auth/google", { credential: credentialResponse.credential });
-      toast.success(res.data.message);
-      sessionStorage.setItem("AppUser", JSON.stringify(res.data.data));
-      setUser(res.data.data);
-      setIsLogin(true);
-      handleClearForm();
-      closeLogin();
-      navigate("/chat");
-    } catch (error) {
-      console.log(error);
-      toast.error(error?.response?.data?.message || "Google Login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleError = () => {
-    toast.error("Google Login Failed");
+  // GoogleAuthButton owns the whole sign-in flow (toast, session, redirect);
+  // the modal only needs to reset its own fields afterwards.
+  const handleGoogleSuccess = () => {
+    handleClearForm();
   };
 
   return (
@@ -131,87 +114,77 @@ const LoginModal = () => {
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-base-content/80">
-              Email Address
-            </label>
-            <input
-              type="email"
-              name="email"
-              placeholder="Enter your email"
-              value={formData.email}
-              onChange={handleChange}
-              disabled={loading}
-              required
-              className="input input-bordered w-full bg-base-200/50 focus:bg-base-100 transition-colors"
-            />
-          </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-base-content/80">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="Enter your email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  disabled={loading}
+                  required
+                  className="input input-bordered w-full bg-base-200/50 focus:bg-base-100 transition-colors"
+                />
+              </div>
 
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-base-content/80">
-              Password
-            </label>
-            <input
-              type="password"
-              name="password"
-              placeholder="Enter your password"
-              value={formData.password}
-              onChange={handleChange}
-              disabled={loading}
-              required
-              className="input input-bordered w-full bg-base-200/50 focus:bg-base-100 transition-colors"
-            />
-            <div className="flex justify-end mt-1">
-              <button
-                type="button"
-                onClick={() => setView("forgot_password_email")}
-                className="text-xs text-primary hover:underline font-medium"
-              >
-                Forgot password?
-              </button>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-base-content/80">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  placeholder="Enter your password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  disabled={loading}
+                  required
+                  className="input input-bordered w-full bg-base-200/50 focus:bg-base-100 transition-colors"
+                />
+                <div className="flex justify-end mt-1">
+                  <button
+                    type="button"
+                    onClick={() => setView("forgot_password_email")}
+                    className="text-xs text-primary hover:underline font-medium"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn btn-primary w-full text-white shadow-lg shadow-primary/30"
+                >
+                  {loading ? (
+                    <span className="loading loading-spinner loading-sm"></span>
+                  ) : (
+                    "Login to Account"
+                  )}
+                </button>
+              </div>
+            </form>
+
+            <div className="divider my-6 text-base-content/50 text-sm">OR CONTINUE WITH</div>
+
+            <GoogleAuthButton disabled={loading} onSuccess={handleGoogleSuccess} />
+
+            <div className="mt-6 text-center">
+              <p className="text-sm text-base-content/60">
+                Don't have an account?{" "}
+                <button
+                  onClick={openRegister}
+                  className="text-primary font-semibold hover:underline"
+                >
+                  Register here
+                </button>
+              </p>
             </div>
-          </div>
-
-          <div className="pt-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn btn-primary w-full text-white shadow-lg shadow-primary/30"
-            >
-              {loading ? (
-                <span className="loading loading-spinner loading-sm"></span>
-              ) : (
-                "Login to Account"
-              )}
-            </button>
-          </div>
-        </form>
-
-        <div className="divider my-6 text-base-content/50 text-sm">OR CONTINUE WITH</div>
-
-          <div className="w-full h-11 flex justify-center items-center overflow-hidden rounded-lg">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={handleGoogleError}
-              theme={localStorage.getItem("theme") === "dark" || localStorage.getItem("theme") === "black" ? "filled_black" : "outline"}
-              shape="rectangular"
-              text="continue_with"
-              size="large"
-              width="320"
-            />
-          </div>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-base-content/60">
-            Don't have an account?{" "}
-            <button
-              onClick={openRegister}
-              className="text-primary font-semibold hover:underline"
-            >
-              Register here
-            </button>
-          </p>
-        </div>
           </>
         )}
 

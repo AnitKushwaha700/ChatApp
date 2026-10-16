@@ -7,7 +7,14 @@ import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig({
   server: {
     headers: {
-      "Cross-Origin-Opener-Policy": "unsafe-none",
+      // Preserve the opener relationship needed by Google's OAuth popup,
+      // without disabling COOP protection entirely.
+      "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+    },
+  },
+  preview: {
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     },
   },
   plugins: [

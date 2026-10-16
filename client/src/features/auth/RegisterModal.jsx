@@ -2,16 +2,12 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import api from "../../lib/api";
 import { useModal } from "../../context/ModalContext";
-import { useAuth } from "./AuthContext";
 import { motion } from "motion/react";
 import { X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { GoogleLogin } from "@react-oauth/google";
+import GoogleAuthButton from "../../components/ui/GoogleAuthButton";
 
 const RegisterModal = () => {
   const { closeRegister, openLogin } = useModal();
-  const { setUser, setIsLogin } = useAuth();
-  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -88,27 +84,10 @@ const RegisterModal = () => {
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse) => {
-    try {
-      setIsLoading(true);
-      const res = await api.post("/auth/google", { credential: credentialResponse.credential });
-      toast.success(res.data.message);
-      sessionStorage.setItem("AppUser", JSON.stringify(res.data.data));
-      setUser(res.data.data);
-      setIsLogin(true);
-      handleClearForm();
-      closeRegister();
-      navigate("/chat");
-    } catch (error) {
-      console.log(error);
-      toast.error(error?.response?.data?.message || "Google Login failed");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleError = () => {
-    toast.error("Google Login Failed");
+  // GoogleAuthButton owns the whole sign-in flow (toast, session, redirect);
+  // the modal only needs to reset its own fields afterwards.
+  const handleGoogleSuccess = () => {
+    handleClearForm();
   };
 
   return (
@@ -235,17 +214,7 @@ const RegisterModal = () => {
 
         <div className="divider my-6 text-base-content/50 text-sm">OR CONTINUE WITH</div>
 
-        <div className="w-full h-11 flex justify-center items-center overflow-hidden rounded-lg">
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={handleGoogleError}
-            theme={localStorage.getItem("theme") === "dark" || localStorage.getItem("theme") === "black" ? "filled_black" : "outline"}
-            shape="rectangular"
-            text="continue_with"
-            size="large"
-            width="320"
-          />
-        </div>
+        <GoogleAuthButton disabled={isLoading} onSuccess={handleGoogleSuccess} />
 
         <div className="mt-6 text-center">
           <p className="text-sm text-base-content/60">
