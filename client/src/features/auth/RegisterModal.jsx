@@ -84,11 +84,6 @@ const RegisterModal = () => {
     }
   };
 
-  // GoogleAuthButton owns the whole sign-in flow (toast, session, redirect);
-  // the modal only needs to reset its own fields afterwards.
-  const handleGoogleSuccess = () => {
-    handleClearForm();
-  };
 
   return (
     <motion.div
@@ -125,7 +120,7 @@ const RegisterModal = () => {
                 value={formData.fullName}
                 onChange={handleChange}
                 disabled={isLoading}
-                className="input input-bordered w-full bg-base-200/50"
+                className="input input-bordered w-full h-11 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors"
               />
               {validationError.fullName && (
                 <p className="text-error text-xs mt-1">{validationError.fullName}</p>
@@ -141,7 +136,7 @@ const RegisterModal = () => {
                 value={formData.email}
                 onChange={handleChange}
                 disabled={isLoading}
-                className="input input-bordered w-full bg-base-200/50"
+                className="input input-bordered w-full h-11 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors"
               />
               {validationError.email && (
                 <p className="text-error text-xs mt-1">{validationError.email}</p>
@@ -159,7 +154,7 @@ const RegisterModal = () => {
               value={formData.mobileNumber}
               onChange={handleChange}
               disabled={isLoading}
-              className="input input-bordered w-full bg-base-200/50"
+              className="input input-bordered w-full h-11 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors"
             />
             {validationError.mobileNumber && (
               <p className="text-error text-xs mt-1">{validationError.mobileNumber}</p>
@@ -176,7 +171,7 @@ const RegisterModal = () => {
                 value={formData.password}
                 onChange={handleChange}
                 disabled={isLoading}
-                className="input input-bordered w-full bg-base-200/50"
+                className="input input-bordered w-full h-11 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors"
               />
             </div>
 
@@ -189,7 +184,7 @@ const RegisterModal = () => {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 disabled={isLoading}
-                className="input input-bordered w-full bg-base-200/50"
+                className="input input-bordered w-full h-11 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors"
               />
               {validationError.confirmPassword && (
                 <p className="text-error text-xs mt-1">{validationError.confirmPassword}</p>
@@ -201,10 +196,13 @@ const RegisterModal = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="btn btn-primary w-full text-white shadow-lg shadow-primary/30"
+              className="btn btn-primary w-full h-12 rounded-xl text-primary-content font-semibold text-base shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {isLoading ? (
-                <span className="loading loading-spinner loading-sm"></span>
+                <div className="flex items-center gap-2">
+                  <span className="loading loading-spinner loading-sm"></span>
+                  <span>Creating Account...</span>
+                </div>
               ) : (
                 "Create Account"
               )}
@@ -212,9 +210,11 @@ const RegisterModal = () => {
           </div>
         </form>
 
-        <div className="divider my-6 text-base-content/50 text-sm">OR CONTINUE WITH</div>
+        <div className="divider my-6 text-base-content/40 text-xs font-semibold tracking-wider uppercase">
+          OR CONTINUE WITH
+        </div>
 
-        <GoogleAuthButton disabled={isLoading} onSuccess={handleGoogleSuccess} />
+        <GoogleAuthButton disabled={isLoading} onSuccess={handleClearForm} />
 
         <div className="mt-6 text-center">
           <p className="text-sm text-base-content/60">

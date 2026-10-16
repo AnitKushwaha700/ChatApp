@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useGoogleLogin } from "@react-oauth/google";
+import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
@@ -43,18 +44,10 @@ const GoogleIcon = ({ className = "w-5 h-5" }) => (
 
 /**
  * Custom "Continue with Google" button that follows the same design language
- * as the login / register modals (flyonui `btn`, full width, theme aware).
+ * as the login / register modals.
  *
- * It uses the OAuth access-token flow so the button can be styled freely —
- * Google's pre-rendered <GoogleLogin /> iframe button cannot be themed.
- * Only the access token is sent to the backend; the profile (email, name,
- * picture) is resolved server-side by Google, never trusted from the browser.
- *
- * @param {string}   text     Button label
- * @param {string}   className Extra classes appended to the button
- * @param {boolean}  disabled Disable the button (e.g. while a form submits)
- * @param {Function} onSuccess Called with the API response data after sign-in
- * @param {Function} onError   Called with the error when sign-in fails
+ * The OAuth access token is sent to the backend, which resolves the profile
+ * directly from Google instead of trusting identity fields from the browser.
  */
 const GoogleAuthButton = ({
   text = "Continue with Google",
@@ -69,8 +62,6 @@ const GoogleAuthButton = ({
   const [isLoading, setIsLoading] = useState(false);
 
   const isConfigured = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
-
-  // True while Google's popup is open and we are waiting for a callback.
   const awaitingPopupRef = useRef(false);
 
   const stopWaiting = () => {
@@ -78,10 +69,8 @@ const GoogleAuthButton = ({
     setIsLoading(false);
   };
 
-  // Safety net: when the popup goes away Google normally answers through
-  // onSuccess / onError / onNonOAuthError. If it never does (popup blocker, or
-  // a Cross-Origin-Opener-Policy that cuts the popup off from this page) the
-  // button would spin forever — so release it once the tab is back in focus.
+  // Avoid leaving the button spinning if a popup disappears without a GIS
+  // callback (for example, when blocked by the browser or the host page).
   useEffect(() => {
     if (!isLoading) return;
 
@@ -94,7 +83,7 @@ const GoogleAuthButton = ({
           awaitingPopupRef.current = false;
           setIsLoading(false);
           toast.error(
-            "Google sign-in didn't finish. Allow popups for this site and try again."
+            "Google sign-in didn't finish. Check popup permissions and try again."
           );
         }
       }, POPUP_SETTLE_DELAY);
@@ -107,13 +96,31 @@ const GoogleAuthButton = ({
     };
   }, [isLoading]);
 
+  const postGoogleToken = async (accessToken) => {
+    const payload = { access_token: accessToken };
+
+    try {
+      return await api.post("/auth/google", payload);
+    } catch (error) {
+      // In local development, retry via Vite's same-origin proxy if the direct
+      // API connection failed before returning an HTTP response.
+      if (
+        import.meta.env.DEV &&
+        (error?.message?.includes("Network Error") || !error?.response)
+      ) {
+        return axios.post("/auth/google", payload, { withCredentials: true });
+      }
+
+      throw error;
+    }
+  };
+
   const authenticateWithBackend = async (accessToken) => {
     awaitingPopupRef.current = false;
 
     try {
       setIsLoading(true);
-
-      const res = await api.post("/auth/google", { access_token: accessToken });
+      const res = await postGoogleToken(accessToken);
 
       toast.success(res.data.message || "Signed in with Google");
       sessionStorage.setItem("AppUser", JSON.stringify(res.data.data));
@@ -148,8 +155,8 @@ const GoogleAuthButton = ({
     },
     onNonOAuthError: (nonOAuthError) => {
       // GIS reports popup closure as a non-OAuth error. It can mean the user
-      // cancelled, but if the popup closes immediately, the deployed COOP
-      // header or Google OAuth origin settings may be wrong.
+      // cancelled, but if it closes immediately, check deployed COOP/origin
+      // configuration.
       stopWaiting();
 
       if (nonOAuthError?.type === "popup_failed_to_open") {
@@ -168,7 +175,7 @@ const GoogleAuthButton = ({
   });
 
   const handleClick = () => {
-    if (isLoading) return;
+    if (disabled || isLoading) return;
 
     if (!isConfigured) {
       console.error("VITE_GOOGLE_CLIENT_ID is missing — Google sign-in is disabled.");
@@ -177,7 +184,6 @@ const GoogleAuthButton = ({
     }
 
     // The Google Identity Services script can still be loading (or be blocked).
-    // Calling login() before then does nothing, so guard the spinner.
     if (!window.google?.accounts?.oauth2) {
       toast.error("Google sign-in is still loading. Please try again in a moment.");
       return;
@@ -206,17 +212,23 @@ const GoogleAuthButton = ({
           ? undefined
           : "Add VITE_GOOGLE_CLIENT_ID to the client .env to enable Google sign-in"
       }
-      className={`btn btn-outline btn-neutral w-full ${className}`.trim()}
+      className={`group relative flex w-full items-center justify-center gap-3 h-12 px-5 rounded-xl border border-base-content/15 bg-base-200/60 hover:bg-base-200 active:bg-base-300/80 text-base-content font-semibold text-sm sm:text-base transition-all duration-200 shadow-xs hover:shadow-md hover:shadow-primary/5 hover:border-primary/50 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] focus-visible:ring-2 focus-visible:ring-primary/40 focus:outline-none disabled:opacity-50 disabled:pointer-events-none cursor-pointer select-none overflow-hidden ${className}`}
     >
+      <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full bg-linear-to-r from-transparent via-base-content/5 to-transparent transition-transform duration-700 ease-in-out pointer-events-none" />
+
       {isLoading ? (
-        <>
-          <span className="loading loading-spinner loading-sm"></span>
-          <span>Connecting...</span>
-        </>
+        <div className="flex items-center gap-2.5">
+          <span className="loading loading-spinner loading-sm text-primary"></span>
+          <span className="text-base-content/80 font-medium text-sm">
+            Connecting with Google...
+          </span>
+        </div>
       ) : (
         <>
-          <GoogleIcon />
-          <span>{text}</span>
+          <GoogleIcon className="w-5 h-5 transition-transform duration-200 group-hover:scale-110" />
+          <span className="text-base-content/90 font-medium tracking-wide group-hover:text-base-content transition-colors">
+            {text}
+          </span>
         </>
       )}
     </button>

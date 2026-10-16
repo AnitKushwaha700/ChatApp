@@ -81,11 +81,6 @@ const LoginModal = () => {
     }
   };
 
-  // GoogleAuthButton owns the whole sign-in flow (toast, session, redirect);
-  // the modal only needs to reset its own fields afterwards.
-  const handleGoogleSuccess = () => {
-    handleClearForm();
-  };
 
   return (
     <motion.div
@@ -114,77 +109,82 @@ const LoginModal = () => {
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-base-content/80">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  disabled={loading}
-                  required
-                  className="input input-bordered w-full bg-base-200/50 focus:bg-base-100 transition-colors"
-                />
-              </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-base-content/80">
+              Email Address
+            </label>
+            <input
+              type="email"
+              name="email"
+              placeholder="Enter your email"
+              value={formData.email}
+              onChange={handleChange}
+              disabled={loading}
+              required
+              className="input input-bordered w-full h-11 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors"
+            />
+          </div>
 
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-base-content/80">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  name="password"
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  disabled={loading}
-                  required
-                  className="input input-bordered w-full bg-base-200/50 focus:bg-base-100 transition-colors"
-                />
-                <div className="flex justify-end mt-1">
-                  <button
-                    type="button"
-                    onClick={() => setView("forgot_password_email")}
-                    className="text-xs text-primary hover:underline font-medium"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-              </div>
-
-              <div className="pt-2">
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-base-content/80">
+                Password
+              </label>
+              <input
+                type="password"
+                name="password"
+                placeholder="Enter your password"
+                value={formData.password}
+                onChange={handleChange}
+                disabled={loading}
+                required
+                className="input input-bordered w-full h-11 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors"
+              />
+              <div className="flex justify-end mt-1">
                 <button
-                  type="submit"
-                  disabled={loading}
-                  className="btn btn-primary w-full text-white shadow-lg shadow-primary/30"
+                  type="button"
+                  onClick={() => setView("forgot_password_email")}
+                  className="text-xs text-primary hover:underline font-medium cursor-pointer"
                 >
-                  {loading ? (
-                    <span className="loading loading-spinner loading-sm"></span>
-                  ) : (
-                    "Login to Account"
-                  )}
+                  Forgot password?
                 </button>
               </div>
-            </form>
-
-            <div className="divider my-6 text-base-content/50 text-sm">OR CONTINUE WITH</div>
-
-            <GoogleAuthButton disabled={loading} onSuccess={handleGoogleSuccess} />
-
-            <div className="mt-6 text-center">
-              <p className="text-sm text-base-content/60">
-                Don't have an account?{" "}
-                <button
-                  onClick={openRegister}
-                  className="text-primary font-semibold hover:underline"
-                >
-                  Register here
-                </button>
-              </p>
             </div>
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn btn-primary w-full h-12 rounded-xl text-primary-content font-semibold text-base shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <span className="loading loading-spinner loading-sm"></span>
+                    <span>Logging in...</span>
+                  </div>
+                ) : (
+                  "Login to Account"
+                )}
+              </button>
+            </div>
+          </form>
+
+          <div className="divider my-6 text-base-content/40 text-xs font-semibold tracking-wider uppercase">
+            OR CONTINUE WITH
+          </div>
+
+          <GoogleAuthButton disabled={loading} onSuccess={handleClearForm} />
+
+        <div className="mt-6 text-center">
+          <p className="text-sm text-base-content/60">
+            Don't have an account?{" "}
+            <button
+              onClick={openRegister}
+              className="text-primary font-semibold hover:underline"
+            >
+              Register here
+            </button>
+          </p>
+        </div>
           </>
         )}
 
@@ -208,7 +208,7 @@ const LoginModal = () => {
                   onChange={handleChange}
                   disabled={loading}
                   required
-                  className="input input-bordered w-full bg-base-200/50 focus:bg-base-100 transition-colors"
+                  className="input input-bordered w-full h-11 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors"
                 />
               </div>
 
@@ -216,10 +216,13 @@ const LoginModal = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="btn btn-primary w-full text-white shadow-lg shadow-primary/30"
+                  className="btn btn-primary w-full h-12 rounded-xl text-primary-content font-semibold text-base shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center gap-2"
                 >
                   {loading ? (
-                    <span className="loading loading-spinner loading-sm"></span>
+                    <div className="flex items-center gap-2">
+                      <span className="loading loading-spinner loading-sm"></span>
+                      <span>Sending OTP...</span>
+                    </div>
                   ) : (
                     "Send OTP"
                   )}
@@ -258,7 +261,7 @@ const LoginModal = () => {
                   onChange={handleChange}
                   disabled={loading}
                   required
-                  className="input input-bordered w-full bg-base-200/50 focus:bg-base-100 transition-colors tracking-widest text-center text-xl"
+                  className="input input-bordered w-full h-11 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors tracking-widest text-center text-xl"
                   maxLength="6"
                 />
               </div>
@@ -275,7 +278,7 @@ const LoginModal = () => {
                   onChange={handleChange}
                   disabled={loading}
                   required
-                  className="input input-bordered w-full bg-base-200/50 focus:bg-base-100 transition-colors"
+                  className="input input-bordered w-full h-11 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors"
                 />
               </div>
 
@@ -283,10 +286,13 @@ const LoginModal = () => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="btn btn-primary w-full text-white shadow-lg shadow-primary/30"
+                  className="btn btn-primary w-full h-12 rounded-xl text-primary-content font-semibold text-base shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center gap-2"
                 >
                   {loading ? (
-                    <span className="loading loading-spinner loading-sm"></span>
+                    <div className="flex items-center gap-2">
+                      <span className="loading loading-spinner loading-sm"></span>
+                      <span>Resetting Password...</span>
+                    </div>
                   ) : (
                     "Reset Password"
                   )}
