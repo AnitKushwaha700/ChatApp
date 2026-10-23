@@ -2,16 +2,12 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import api from "../../lib/api";
 import { useModal } from "../../context/ModalContext";
-import { useAuth } from "./AuthContext";
 import { motion } from "motion/react";
 import { X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import GoogleAuthButton from "../../components/ui/GoogleAuthButton";
 
 const RegisterModal = () => {
   const { closeRegister, openLogin } = useModal();
-  const { setUser, setIsLogin } = useAuth();
-  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
     fullName: "",

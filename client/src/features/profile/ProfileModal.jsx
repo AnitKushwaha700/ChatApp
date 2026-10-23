@@ -11,6 +11,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
     fullName: user?.fullName || "",
     email: user?.email || "",
     mobileNumber: user?.mobileNumber || "",
+    about: user?.about || "",
   });
   const [profilePic, setProfilePic] = useState(null);
   const [previewPic, setPreviewPic] = useState(
@@ -50,6 +51,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
       data.append("fullName", formData.fullName);
       data.append("email", formData.email);
       data.append("mobileNumber", formData.mobileNumber);
+      data.append("about", formData.about || "");
       if (profilePic) {
         data.append("profilePic", profilePic);
       }
@@ -154,6 +156,21 @@ const ProfileModal = ({ isOpen, onClose }) => {
                 value={formData.mobileNumber}
                 onChange={handleChange}
                 className="input input-bordered w-full"
+              />
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">About</span>
+              </label>
+              <textarea
+                name="about"
+                value={formData.about}
+                onChange={handleChange}
+                maxLength={139}
+                rows={2}
+                className="textarea textarea-bordered w-full"
+                placeholder="Hey there! I am using ChatApp"
               />
             </div>
 

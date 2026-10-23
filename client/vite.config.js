@@ -6,6 +6,7 @@ import { VitePWA } from "vite-plugin-pwa";
 // https://vite.dev/config/
 export default defineConfig({
   server: {
+    allowedHosts: true,
     headers: {
       "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     },
@@ -15,6 +16,22 @@ export default defineConfig({
         changeOrigin: true,
       },
       "/user": {
+        target: "http://127.0.0.1:4500",
+        changeOrigin: true,
+      },
+      "/social": {
+        target: "http://127.0.0.1:4500",
+        changeOrigin: true,
+      },
+      "/groups": {
+        target: "http://127.0.0.1:4500",
+        changeOrigin: true,
+      },
+      "/status": {
+        target: "http://127.0.0.1:4500",
+        changeOrigin: true,
+      },
+      "/calls": {
         target: "http://127.0.0.1:4500",
         changeOrigin: true,
       },

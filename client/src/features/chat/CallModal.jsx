@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff } from "lucide-react";
 import socketAPI from "../../lib/webSocket";
+import api from "../../lib/api";
 import { useAuth } from "../auth/AuthContext";
 
 const ICE_SERVERS = {
@@ -30,6 +31,28 @@ const CallModal = ({
   const pcRef = useRef(null);
   const candidatesQueueRef = useRef([]);
   const initiatedCallIdRef = useRef(null);
+  const connectedAtRef = useRef(null);
+  const loggedRef = useRef(false);
+
+  const reportCallLog = async (status) => {
+    if (loggedRef.current) return;
+    loggedRef.current = true;
+    const data = callDataRef.current;
+    if (!data) return;
+    const otherParty = data.to || data.from;
+    try {
+      await api.post("/calls", {
+        callee: otherParty,
+        type: data.isVideo ? "video" : "audio",
+        status,
+        durationSec: connectedAtRef.current
+          ? Math.floor((new Date().getTime() - connectedAtRef.current) / 1000)
+          : 0,
+      });
+    } catch (err) {
+      console.error("Call log failed", err);
+    }
+  };
   
   const callDataRef = useRef(callData);
   useEffect(() => {
@@ -98,6 +121,12 @@ const CallModal = ({
 
   const handleHangup = () => {
     socketAPI.emit("endCall", { to: callData?.to || callData?.from });
+    if (connectedAtRef.current) {
+      reportCallLog("answered");
+    } else if (callData?.to) {
+      // Outgoing call canceled before the other side picked up
+      reportCallLog("unavailable");
+    }
     cleanupCall();
     if (onEndCall) onEndCall();
   };
@@ -120,6 +149,8 @@ const CallModal = ({
     }
     candidatesQueueRef.current = [];
     initiatedCallIdRef.current = null;
+    connectedAtRef.current = null;
+    loggedRef.current = false;
     setCallStatus("");
     setIsMuted(false);
     setIsVideoOff(false);
@@ -128,6 +159,7 @@ const CallModal = ({
   useEffect(() => {
     const handleCallAccepted = async () => {
       setCallStatus("active");
+      connectedAtRef.current = new Date().getTime();
       const currentCallData = callDataRef.current;
       if (!currentCallData) return;
 
@@ -213,6 +245,8 @@ const CallModal = ({
     };
 
     const handleCallEnded = () => {
+      // The other side hung up; persist our own answered record
+      if (connectedAtRef.current) reportCallLog("answered");
       cleanupCall();
       if (onEndCall) onEndCall();
     };
@@ -267,6 +301,7 @@ const CallModal = ({
   const handleAccept = async () => {
     try {
       setCallStatus("active");
+      connectedAtRef.current = new Date().getTime();
       if (onAcceptCall) onAcceptCall();
 
       const stream = await getMedia(callData.isVideo);
@@ -287,7 +322,10 @@ const CallModal = ({
   };
 
   const handleReject = () => {
-    socketAPI.emit("rejectCall", { to: callData.from });
+    socketAPI.emit("rejectCall", {
+      to: callData.from,
+      isVideo: callData.isVideo,
+    });
     cleanupCall();
     if (onRejectCall) onRejectCall();
   };

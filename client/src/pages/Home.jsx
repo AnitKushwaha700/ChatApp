@@ -1,7 +1,7 @@
 
 import { motion } from "motion/react";
 import { useModal } from "../context/ModalContext";
-import { MessageSquare, Zap, Shield, Users } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 
 const Home = () => {
   const { openLogin } = useModal();

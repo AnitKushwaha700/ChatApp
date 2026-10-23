@@ -1,6 +1,5 @@
 import User from "./userModel.js";
 import Message from "../chat/messageModel.js";
-import { OnlineUsers, getIo } from "../../core/socket/webSocket.js";
 
 export const getAllUsers = async (req, res, next) => {
   try {
@@ -48,12 +47,13 @@ export const updateProfile = async (req, res, next) => {
   try {
     const currentUser = req.user;
 
-    const { fullName, email, mobileNumber } = req.body;
+    const { fullName, email, mobileNumber, about } = req.body;
 
     if (
       (fullName !== undefined && typeof fullName !== "string") ||
       (email !== undefined && typeof email !== "string") ||
-      (mobileNumber !== undefined && typeof mobileNumber !== "string")
+      (mobileNumber !== undefined && typeof mobileNumber !== "string") ||
+      (about !== undefined && typeof about !== "string")
     ) {
       const error = new Error("Invalid input formats");
       error.statusCode = 400;
@@ -84,6 +84,7 @@ export const updateProfile = async (req, res, next) => {
         ...(fullName && { fullName }),
         ...(email && { email }),
         ...(mobileNumber !== undefined && { mobileNumber }),
+        ...(about !== undefined && { about: about.slice(0, 139) }),
         ...(profilePicUrl && { profilePic: profilePicUrl }),
       },
       { new: true },

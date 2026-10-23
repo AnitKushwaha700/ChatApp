@@ -9,6 +9,10 @@ import morgan from "morgan";
 import connectDB from "./src/core/database/db.js";
 import AuthRouter from "./src/modules/auth/authRouter.js";
 import UserRouter from "./src/modules/user/userRouter.js";
+import SocialRouter from "./src/modules/social/socialRouter.js";
+import GroupRouter from "./src/modules/group/groupRouter.js";
+import StatusRouter from "./src/modules/status/statusRouter.js";
+import CallRouter from "./src/modules/call/callRouter.js";
 
 import http from "http";
 import { Server } from "socket.io";
@@ -66,6 +70,10 @@ app.use("/public", express.static(path.join(process.cwd(), "public")));
 // Routes
 app.use("/auth", AuthRouter);
 app.use("/user", UserRouter);
+app.use("/social", SocialRouter);
+app.use("/groups", GroupRouter);
+app.use("/status", StatusRouter);
+app.use("/calls", CallRouter);
 
 // Health check
 app.get("/", (req, res) => {
@@ -114,6 +122,9 @@ const io = new Server(httpServer, {
     methods: ["GET", "POST"],
   },
 });
+
+// Make the Socket.IO instance available to REST controllers
+app.set("io", io);
 
 websocket(io);
 

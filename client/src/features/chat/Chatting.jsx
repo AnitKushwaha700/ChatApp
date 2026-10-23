@@ -1,22 +1,14 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import api from "../../lib/api";
 import socketAPI from "../../lib/webSocket";
 import { useAuth } from "../auth/AuthContext";
+import MessageBubble from "./MessageBubble";
+import MessageInput from "./MessageInput";
+import ForwardModal from "./ForwardModal";
 import {
   X,
-  Image as ImageIcon,
-  Send,
-  Plus,
-  Mic,
-  FileText,
-  Camera,
-  Music,
-  UserPlus,
-  StopCircle,
-  Smile,
   ArrowLeft,
   MoreVertical,
-  Check,
   CheckCheck,
   Video,
   Phone,
@@ -24,886 +16,970 @@ import {
   Sun,
   Moon,
   MoonStar,
+  Music,
   MessageSquare,
   Briefcase,
   Leaf,
   Cloud,
+  Star,
+  Trash2,
+  Forward,
+  Ban,
+  Pin,
+  PinOff,
+  BellOff,
+  Archive,
+  Timer,
+  Info,
+  Users,
 } from "lucide-react";
-import EmojiPicker from "emoji-picker-react";
-import { motion } from "motion/react";
+import toast from "react-hot-toast";
+import {
+  getMediaUrl,
+  getInitials,
+  formatLastSeen,
+  playMessageSound,
+} from "../../lib/helpers";
 
-const isEmojiOnly = (text) => {
-  if (!text) return false;
-  const noSpace = text.replace(/[\s\n]/g, "");
-  if (noSpace.length === 0) return false;
-  return /^[\p{Emoji_Presentation}\p{Extended_Pictographic}]+$/u.test(noSpace);
-};
+const THEMES = [
+  { id: "light", name: "Light Mode", icon: Sun },
+  { id: "dark", name: "Dark Mode", icon: Moon },
+  { id: "black", name: "Midnight", icon: MoonStar },
+  { id: "spotify", name: "Spotify", icon: Music },
+  { id: "claude", name: "Claude", icon: MessageSquare },
+  { id: "corporate", name: "Corporate", icon: Briefcase },
+  { id: "ghibli", name: "Ghibli", icon: Leaf },
+  { id: "pastel", name: "Pastel", icon: Cloud },
+];
 
-const playMessageSound = (type = 'incoming') => {
-  try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-    
-    osc.connect(gainNode);
-    gainNode.connect(ctx.destination);
-    
-    if (type === 'outgoing') {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(400, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.1);
-      gainNode.gain.setValueAtTime(0, ctx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.02);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.1);
-    } else {
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(600, ctx.currentTime);
-      osc.frequency.setValueAtTime(800, ctx.currentTime + 0.1);
-      gainNode.gain.setValueAtTime(0, ctx.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.02);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.2);
-    }
-  } catch (e) {
-    console.error("Audio playback failed", e);
-  }
-};
+const MUTE_OPTIONS = [
+  { label: "Mute for 8 hours", ms: 8 * 3600 * 1000 },
+  { label: "Mute for 1 week", ms: 7 * 24 * 3600 * 1000 },
+  { label: "Mute for 1 year", ms: 365 * 24 * 3600 * 1000 },
+];
+const DISAPPEAR_OPTIONS = [
+  { label: "Off", hours: 0 },
+  { label: "24 hours", hours: 24 },
+  { label: "7 days", hours: 168 },
+  { label: "30 days", hours: 720 },
+];
 
-const getMediaUrl = (url) => {
-  if (!url) return "";
-  return url.startsWith("http") ? url : `${api.defaults.baseURL}${url}`;
-};
+const TypingDots = () => (
+  <div className="flex items-center gap-1 px-1">
+    {[0, 1, 2].map((i) => (
+      <span
+        key={i}
+        className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce"
+        style={{ animationDelay: `${i * 0.15}s` }}
+      />
+    ))}
+  </div>
+);
 
 const Chatting = ({
-  selectedFriend,
-  setSelectedFriend,
+  selectedChat,
+  setSelectedChat,
   onlineUsers = {},
   initiateCall,
+  onOpenGroupInfo,
+  onChatChanged,
 }) => {
-  const { user, setUser } = useAuth();
-  const [filteredChatData, setFilteredChatData] = useState([]);
-  const [message, setMessage] = useState("");
-  const [isAttachmentOpen, setIsAttachmentOpen] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(null);
-  const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
-  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
-  const [isClearChatModalOpen, setIsClearChatModalOpen] = useState(false);
+  const { user } = useAuth();
+  const isGroup = selectedChat?.chatType === "group";
+  const chatId = selectedChat?._id;
+
+  const [messages, setMessages] = useState([]);
+  const [nextCursor, setNextCursor] = useState(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [replyTo, setReplyTo] = useState(null);
+  const [editTarget, setEditTarget] = useState(null);
+  const [forwardMsg, setForwardMsg] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [typing, setTyping] = useState({});
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [themeModal, setThemeModal] = useState(false);
+  const [clearModal, setClearModal] = useState(false);
+  const [starredOpen, setStarredOpen] = useState(false);
+  const [starred, setStarred] = useState([]);
 
   const messagesEndRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-  const timerRef = useRef(null);
-  const attachmentRef = useRef(null);
+  const scrollContainerRef = useRef(null);
+  const menuRef = useRef(null);
+  const typingTimers = useRef({});
 
-
-
-  const fetchChatData = async () => {
-    try {
-      const res = await api.get(`/user/get-messages/${selectedFriend._id}`);
-      setFilteredChatData(res.data.data);
-
-      // Mark messages as read
-      await api.put(`/user/mark-read/${selectedFriend._id}`);
-    } catch (error) {
-      console.error("Failed to fetch chat data", error);
-    }
+  const historyUrl = (cursor) => {
+    const base = isGroup
+      ? `/user/group-messages/${chatId}`
+      : `/user/get-messages/${chatId}`;
+    return cursor ? `${base}?cursor=${cursor}` : base;
   };
 
-  const handleClearChat = async () => {
-    try {
-      await api.delete(`/user/messages/${selectedFriend._id}`);
-      setFilteredChatData([]);
-      setIsHeaderMenuOpen(false);
-      setIsClearChatModalOpen(false);
-    } catch (error) {
-      console.error("Failed to clear chat", error);
-    }
+  const markRead = useCallback(() => {
+    if (!chatId) return;
+    const url = isGroup
+      ? `/user/mark-read-group/${chatId}`
+      : `/user/mark-read/${chatId}`;
+    api.put(url).catch(() => {});
+    socketAPI.emit("message:read", isGroup ? { groupId: chatId } : { friendId: chatId });
+  }, [chatId, isGroup]);
+
+  const fetchMessages = useCallback(
+    async (cursor = null) => {
+      try {
+        const res = await api.get(historyUrl(cursor));
+        return res.data;
+      } catch (err) {
+        console.error("Failed to fetch messages", err);
+        return { data: [], nextCursor: null, hasMore: false };
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [chatId, isGroup],
+  );
+
+  // Initial load on chat switch
+  useEffect(() => {
+    let active = true;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMessages([]);
+    setReplyTo(null);
+    setEditTarget(null);
+    setSelectionMode(false);
+    setSelectedIds([]);
+    setTyping({});
+    fetchMessages().then((res) => {
+      if (!active) return;
+      setMessages(res.data || []);
+      setNextCursor(res.nextCursor || null);
+      setHasMore(!!res.hasMore);
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "auto" }), 50);
+      markRead();
+    });
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId, isGroup]);
+
+  const loadOlder = async () => {
+    if (!hasMore || loadingOlder || !nextCursor) return;
+    setLoadingOlder(true);
+    const container = scrollContainerRef.current;
+    const prevHeight = container?.scrollHeight || 0;
+    const res = await fetchMessages(nextCursor);
+    setMessages((prev) => [...(res.data || []), ...prev]);
+    setNextCursor(res.nextCursor || null);
+    setHasMore(!!res.hasMore);
+    requestAnimationFrame(() => {
+      if (container) container.scrollTop += container.scrollHeight - prevHeight;
+    });
+    setLoadingOlder(false);
   };
 
-  const handleDeleteMessage = async (messageId, type) => {
-    try {
-      await api.delete(`/user/message/${messageId}?type=${type}`);
-      if (type === "for_me") {
-        setFilteredChatData((prev) => prev.filter((m) => m._id !== messageId));
-      } else {
-        setFilteredChatData((prev) =>
-          prev.map((m) => {
-            if (m._id === messageId) {
-              return {
+  // ───────── Socket events ─────────
+  useEffect(() => {
+    const belongsToChat = (msg) => {
+      if (isGroup) return String(msg.groupId) === String(chatId);
+      const senderId =
+        typeof msg.senderId === "object" ? msg.senderId?._id : msg.senderId;
+      return (
+        String(senderId) === String(chatId) ||
+        String(msg.receiverId) === String(chatId)
+      );
+    };
+
+    const handleNewMessage = (msg) => {
+      if (!belongsToChat(msg)) return;
+      const senderId =
+        typeof msg.senderId === "object" ? msg.senderId?._id : msg.senderId;
+      const isIncoming = String(senderId) !== String(user._id);
+      setMessages((prev) => {
+        if (prev.find((m) => m._id === msg._id)) return prev;
+        if (
+          msg.tempClientId &&
+          prev.find((m) => m.tempClientId === msg.tempClientId)
+        ) {
+          return prev.map((m) => (m.tempClientId === msg.tempClientId ? msg : m));
+        }
+        if (isIncoming) {
+          playMessageSound("incoming");
+          if (!isGroup) {
+            socketAPI.emit("message:delivered", { messageId: msg._id });
+          }
+        }
+        return [...prev, msg];
+      });
+      if (isIncoming) markRead();
+      onChatChanged?.();
+    };
+
+    const handleDeleted = ({ messageId }) => {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m._id === messageId
+            ? {
                 ...m,
                 message: "🚫 This message was deleted",
                 messageType: "text",
                 mediaUrl: null,
+                isDeletedForEveryone: true,
+                reactions: [],
+              }
+            : m,
+        ),
+      );
+    };
+
+    const handleUpdated = (updated) => {
+      if (!belongsToChat(updated)) return;
+      setMessages((prev) => prev.map((m) => (m._id === updated._id ? updated : m)));
+    };
+
+    const handleReaction = ({ messageId, reactions }) => {
+      setMessages((prev) =>
+        prev.map((m) => (m._id === messageId ? { ...m, reactions } : m)),
+      );
+    };
+
+    const handleStatus = (payload) => {
+      if (payload.chatType === "group") {
+        if (String(payload.chatId) !== String(chatId)) return;
+        if (payload.status === "read") {
+          setMessages((prev) =>
+            prev.map((m) => {
+              if (String(m.groupId) !== String(chatId)) return m;
+              if (m.readBy?.some((r) => String(r.user?._id || r.user) === String(payload.userId))) {
+                return m;
+              }
+              return { ...m, readBy: [...(m.readBy || []), { user: payload.userId }] };
+            }),
+          );
+        }
+        return;
+      }
+      // DM
+      if (payload.messageId) {
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m._id !== payload.messageId) return m;
+            if (payload.status === "delivered") {
+              return {
+                ...m,
+                deliveredTo: Array.from(
+                  new Set([...(m.deliveredTo || []), payload.userId]),
+                ),
               };
             }
-            return m;
+            return { ...m, isRead: true, readBy: [{ user: payload.userId }] };
           }),
         );
+      } else if (payload.status === "read" && String(payload.chatId) === String(chatId)) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            String(m.receiverId) === String(chatId) && String(m.senderId) === String(user._id)
+              ? { ...m, isRead: true, readBy: [{ user: chatId }] }
+              : m,
+          ),
+        );
       }
-    } catch (error) {
-      console.error("Failed to delete message", error);
-    }
-  };
+    };
 
-  const handleMessageSend = async (e, type = "text", file = null) => {
-    e?.preventDefault();
-    if (type === "text" && !message.trim()) return;
-
-    try {
-      if (type === "text") {
-        const res = await api.post("/user/send-message", {
-          receiverID: selectedFriend._id,
-          message,
-          messageType: "text",
-        });
-        setFilteredChatData((prev) => [...prev, res.data.data]);
-        setMessage("");
-      } else if (file) {
-        const formData = new FormData();
-        formData.append("receiverID", selectedFriend._id);
-        formData.append("messageType", type);
-        formData.append("media", file);
-
-        const res = await api.post("/user/send-message", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-        setFilteredChatData((prev) => [...prev, res.data.data]);
-      }
-      playMessageSound('outgoing');
-
-      setIsAttachmentOpen(false);
-      setShowEmojiPicker(false);
-    } catch (error) {
-      console.error("Failed to send message", error);
-    }
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    let type = "document";
-    if (file.type.startsWith("image/")) type = "image";
-    else if (file.type.startsWith("video/")) type = "video";
-    else if (file.type.startsWith("audio/")) type = "audio";
-
-    handleMessageSend(null, type, file);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
+    const handleTyping = (data) => {
+      if (isGroup) {
+        if (String(data.groupId) !== String(chatId)) return;
+        const uid = String(data.userId);
+        if (data.isTyping) {
+          setTyping((prev) => ({ ...prev, [uid]: data.name || "Someone" }));
+          clearTimeout(typingTimers.current[uid]);
+          typingTimers.current[uid] = setTimeout(() => {
+            setTyping((prev) => {
+              const next = { ...prev };
+              delete next[uid];
+              return next;
+            });
+          }, 4000);
+        } else {
+          setTyping((prev) => {
+            const next = { ...prev };
+            delete next[uid];
+            return next;
+          });
         }
-      };
-
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, {
-          type: "audio/webm",
-        });
-        const audioFile = new File([audioBlob], "voice-message.webm", {
-          type: "audio/webm",
-        });
-        handleMessageSend(null, "audio", audioFile);
-
-        stream.getTracks().forEach((track) => track.stop());
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-      setRecordingTime(0);
-
-      timerRef.current = setInterval(() => {
-        setRecordingTime((prev) => prev + 1);
-      }, 1000);
-    } catch (error) {
-      console.error("Error accessing microphone:", error);
-      alert("Microphone access denied or not available.");
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      clearInterval(timerRef.current);
-    }
-  };
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchChatData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFriend]);
-
-  useEffect(() => {
-    const handleNewMessage = (newMessage) => {
-      if (
-        newMessage.senderId === selectedFriend?._id ||
-        newMessage.receiverId === selectedFriend?._id
-      ) {
-        setFilteredChatData((prev) => {
-          // Check if message already exists to avoid duplicates
-          if (prev.find((msg) => msg._id === newMessage._id)) return prev;
-          if (newMessage.senderId !== user._id) {
-            playMessageSound('incoming');
-          }
-          return [...prev, newMessage];
-        });
-
-        // Mark as read if the chat is currently open
-        if (newMessage.senderId === selectedFriend?._id) {
-          api.put(`/user/mark-read/${selectedFriend._id}`).catch(console.error);
+      } else if (String(data.from) === String(chatId)) {
+        setTyping({ dm: data.isTyping });
+        clearTimeout(typingTimers.current.dm);
+        if (data.isTyping) {
+          typingTimers.current.dm = setTimeout(() => setTyping({}), 4000);
         }
       }
     };
 
-    const handleMessageDeleted = ({ messageId }) => {
-      setFilteredChatData((prev) =>
-        prev.map((m) => {
-          if (m._id === messageId) {
-            return {
-              ...m,
-              message: "🚫 This message was deleted",
-              messageType: "text",
-              mediaUrl: null,
-            };
-          }
-          return m;
-        }),
-      );
+    const handleGroupUpdated = (payload) => {
+      if (String(payload?._id) === String(chatId)) onChatChanged?.();
     };
 
     socketAPI.on("newMessage", handleNewMessage);
-    socketAPI.on("messageDeleted", handleMessageDeleted);
-
+    socketAPI.on("messageDeleted", handleDeleted);
+    socketAPI.on("message:updated", handleUpdated);
+    socketAPI.on("message:reaction", handleReaction);
+    socketAPI.on("message:status", handleStatus);
+    socketAPI.on("typing", handleTyping);
+    socketAPI.on("group:updated", handleGroupUpdated);
+    const timers = typingTimers.current;
     return () => {
       socketAPI.off("newMessage", handleNewMessage);
-      socketAPI.off("messageDeleted", handleMessageDeleted);
+      socketAPI.off("messageDeleted", handleDeleted);
+      socketAPI.off("message:updated", handleUpdated);
+      socketAPI.off("message:reaction", handleReaction);
+      socketAPI.off("message:status", handleStatus);
+      socketAPI.off("typing", handleTyping);
+      socketAPI.off("group:updated", handleGroupUpdated);
+      Object.values(timers).forEach(clearTimeout);
     };
-  }, [selectedFriend, user._id]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        attachmentRef.current &&
-        !attachmentRef.current.contains(event.target)
-      ) {
-        setIsAttachmentOpen(false);
-      }
-      // Simple way to close emoji picker when clicking outside without a dedicated ref
-      if (
-        showEmojiPicker &&
-        !event.target.closest(".emoji-picker-react") &&
-        !event.target.closest("button")
-      ) {
-        setShowEmojiPicker(false);
-      }
-      if (showDeleteModal && !event.target.closest(".delete-modal")) {
-        setShowDeleteModal(null);
-      }
-      if (isHeaderMenuOpen && !event.target.closest(".header-menu")) {
-        setIsHeaderMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showEmojiPicker, showDeleteModal, isHeaderMenuOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatId, isGroup, user._id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [filteredChatData]);
+  }, [messages.length]);
 
   useEffect(() => {
-    const handleResize = () => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const close = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
     };
-    window.addEventListener("resize", handleResize);
-    window.visualViewport?.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      window.visualViewport?.removeEventListener("resize", handleResize);
-    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
   }, []);
 
-  const renderMessageContent = (chat, emojiOnly) => {
-    if (chat.messageType === "text") {
-      if (emojiOnly) {
-        return (
-          <motion.div
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            className="text-5xl leading-none"
-          >
-            {chat.message}
-          </motion.div>
-        );
-      }
-      return (
-        <p className="text-sm leading-relaxed whitespace-pre-wrap">
-          {chat.message}
-        </p>
+  // ───────── Actions ─────────
+  const sendText = async (text, extras = {}) => {
+    const tempClientId =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random()}`;
+    const optimistic = {
+      _id: `temp-${tempClientId}`,
+      tempClientId,
+      senderId: user._id,
+      receiverId: isGroup ? null : chatId,
+      groupId: isGroup ? chatId : null,
+      message: text,
+      messageType: "text",
+      createdAt: new Date().toISOString(),
+      deliveredTo: [],
+      readBy: [],
+      reactions: [],
+      replyTo: extras.replyTo || null,
+    };
+    setMessages((prev) => [...prev, optimistic]);
+    try {
+      const payload = {
+        message: text,
+        messageType: "text",
+        tempClientId,
+        ...(extras.replyTo && { replyTo: extras.replyTo }),
+        ...(isGroup ? { groupId: chatId } : { receiverID: chatId }),
+      };
+      const res = await api.post("/user/send-message", payload);
+      setMessages((prev) =>
+        prev.map((m) => (m.tempClientId === tempClientId ? res.data.data : m)),
       );
-    } else if (chat.messageType === "image" && chat.mediaUrl) {
-      return (
-        <div className="relative">
-          <img
-            src={getMediaUrl(chat.mediaUrl)}
-            alt="Attachment"
-            className="max-w-60 sm:max-w-75 h-auto rounded-lg object-cover"
-          />
-          {chat.message && chat.message !== "Sent an attachment" && (
-            <p className="text-sm mt-2 px-1">{chat.message}</p>
-          )}
-        </div>
-      );
-    } else if (chat.messageType === "audio" && chat.mediaUrl) {
-      return (
-        <div className="flex flex-col gap-1 w-60 mt-1">
-          <audio
-            controls
-            src={getMediaUrl(chat.mediaUrl)}
-            className="w-full h-10 outline-none rounded-full"
-          />
-        </div>
-      );
-    } else if (chat.messageType === "video" && chat.mediaUrl) {
-      return (
-        <div className="relative">
-          <video
-            controls
-            src={getMediaUrl(chat.mediaUrl)}
-            className="max-w-60 sm:max-w-75 rounded-lg object-cover"
-          />
-        </div>
-      );
-    } else {
-      return (
-        <a
-          href={getMediaUrl(chat.mediaUrl)}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center gap-3 text-sm bg-base-100/10 hover:bg-base-100/20 p-3 rounded-xl transition-colors border border-base-content/10"
-        >
-          <div className="p-2 bg-base-100/50 rounded-lg">
-            <FileText size={24} />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-medium underline">Document</span>
-            <span className="text-xs opacity-70">Click to view</span>
-          </div>
-        </a>
-      );
+      playMessageSound("outgoing");
+      onChatChanged?.();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to send");
+      setMessages((prev) => prev.filter((m) => m.tempClientId !== tempClientId));
     }
   };
 
+  const sendFile = async (file, type) => {
+    const formData = new FormData();
+    if (isGroup) formData.append("groupId", chatId);
+    else formData.append("receiverID", chatId);
+    formData.append("messageType", type);
+    formData.append("media", file);
+    if (replyTo) formData.append("replyTo", replyTo._id);
+    try {
+      const res = await api.post("/user/send-message", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setMessages((prev) => [...prev, res.data.data]);
+      setReplyTo(null);
+      playMessageSound("outgoing");
+      onChatChanged?.();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to send media");
+    }
+  };
 
+  const editText = async (messageId, text) => {
+    try {
+      const res = await api.patch(`/user/message/${messageId}`, { message: text });
+      setMessages((prev) => prev.map((m) => (m._id === messageId ? res.data.data : m)));
+      setEditTarget(null);
+      toast.success("Message edited");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Edit failed");
+    }
+  };
+
+  const react = async (msg, emoji) => {
+    try {
+      const res = await api.post(`/user/message/${msg._id}/react`, { emoji });
+      setMessages((prev) =>
+        prev.map((m) => (m._id === msg._id ? { ...m, reactions: res.data.data.reactions } : m)),
+      );
+    } catch {
+      toast.error("Reaction failed");
+    }
+  };
+
+  const toggleStar = async (msg) => {
+    const isStarred = msg.starredBy?.some((id) => String(id) === String(user._id));
+    try {
+      const res = await api({
+        method: isStarred ? "delete" : "post",
+        url: `/user/message/${msg._id}/star`,
+      });
+      setMessages((prev) =>
+        prev.map((m) =>
+          m._id === msg._id ? { ...m, starredBy: res.data.data.starredBy } : m,
+        ),
+      );
+      toast.success(isStarred ? "Unstarred" : "Starred");
+    } catch {
+      toast.error("Star action failed");
+    }
+  };
+
+  const confirmDelete = async () => {
+    const { id, type } = deleteTarget;
+    try {
+      await api.delete(`/user/message/${id}?type=${type}`);
+      if (type === "for_me") {
+        setMessages((prev) => prev.filter((m) => m._id !== id));
+      } else {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m._id === id
+              ? {
+                  ...m,
+                  message: "🚫 This message was deleted",
+                  messageType: "text",
+                  mediaUrl: null,
+                  isDeletedForEveryone: true,
+                  reactions: [],
+                }
+              : m,
+          ),
+        );
+      }
+      toast.success("Message deleted");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Delete failed");
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
+
+  const clearChat = async () => {
+    try {
+      await api.delete(
+        isGroup ? `/user/group-messages/${chatId}` : `/user/messages/${chatId}`,
+      );
+      setMessages([]);
+      setClearModal(false);
+      toast.success("Chat cleared");
+      onChatChanged?.();
+    } catch {
+      toast.error("Clear chat failed");
+    }
+  };
+
+  const updateChatSetting = async (patch) => {
+    await api.patch(`/social/chat-settings/${isGroup ? "group" : "dm"}/${chatId}`, patch);
+    toast.success("Updated");
+    onChatChanged?.();
+  };
+
+  const toggleBlock = async () => {
+    try {
+      const nextBlocked = !selectedChat.blocked;
+      if (selectedChat.blocked) {
+        await api.delete(`/social/block/${chatId}`);
+        toast.success("User unblocked");
+      } else {
+        await api.post(`/social/block/${chatId}`);
+        toast.success("User blocked");
+      }
+      setSelectedChat({ ...selectedChat, blocked: nextBlocked });
+      setMenuOpen(false);
+      onChatChanged?.();
+    } catch {
+      toast.error("Action failed");
+    }
+  };
+
+  const openStarred = async () => {
+    setMenuOpen(false);
+    setStarredOpen(true);
+    try {
+      const res = await api.get("/user/starred-messages");
+      setStarred(res.data.data);
+    } catch {
+      toast.error("Failed to load starred messages");
+    }
+  };
+
+  // Group permission helpers
+  const myMembership = isGroup
+    ? selectedChat.members?.find((m) => String(m.user?._id || m.user) === String(user._id))
+    : null;
+  const myRole = myMembership?.role || "member";
+  const sendDisabled =
+    isGroup && selectedChat.onlyAdminsCanSend && myRole !== "admin";
+  const isMuted = selectedChat.settings?.mutedUntil
+    ? new Date(selectedChat.settings.mutedUntil) > new Date()
+    : false;
+
+  // Header subtitle
+  const headerSubtitle = () => {
+    if (isGroup) {
+      const typingUsers = Object.values(typing);
+      if (typingUsers.length > 0)
+        return `${typingUsers.slice(0, 2).join(", ")} typing...`;
+      return `${selectedChat.memberCount || selectedChat.members?.length || 0} members`;
+    }
+    if (typing.dm) return "typing...";
+    if (onlineUsers[chatId]) return "online";
+    return selectedChat.lastSeen ? formatLastSeen(selectedChat.lastSeen) : "offline";
+  };
+
+  // Date separators
+  const renderMessages = () => {
+    let lastDate = null;
+    return messages.map((msg) => {
+      const dateObj = new Date(msg.createdAt);
+      const dateKey = dateObj.toLocaleDateString();
+      const isNewDate = lastDate !== dateKey;
+      lastDate = dateKey;
+      let label = dateKey;
+      if (dateKey === new Date().toLocaleDateString()) label = "Today";
+      else if (dateKey === new Date(Date.now() - 86400000).toLocaleDateString()) {
+        label = "Yesterday";
+      }
+      const isMe =
+        String(typeof msg.senderId === "object" ? msg.senderId?._id : msg.senderId) ===
+        String(user._id);
+      return (
+        <React.Fragment key={msg._id}>
+          {isNewDate && (
+            <div className="w-full flex justify-center my-3">
+              <span className="bg-base-200/80 backdrop-blur-sm px-3 py-1 rounded-full text-xs text-base-content/70 shadow-sm border border-base-content/10 font-medium">
+                {label}
+              </span>
+            </div>
+          )}
+          <MessageBubble
+            msg={msg}
+            isMe={isMe}
+            chatType={isGroup ? "group" : "dm"}
+            currentUserId={user._id}
+            peerId={chatId}
+            selectionMode={selectionMode}
+            isSelected={selectedIds.includes(msg._id)}
+            onReply={(m) => setReplyTo(m)}
+            onReact={react}
+            onStar={toggleStar}
+            onForward={(m) => setForwardMsg(m)}
+            onEdit={(m) => setEditTarget(m)}
+            onDelete={(m, type) => setDeleteTarget({ id: m._id, type })}
+            onSelect={(id) =>
+              setSelectedIds((prev) =>
+                prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+              )
+            }
+          />
+        </React.Fragment>
+      );
+    });
+  };
+
+  const bulkAction = async (action) => {
+    try {
+      if (action === "delete") {
+        await Promise.all(
+          selectedIds.map((id) => api.delete(`/user/message/${id}?type=for_me`)),
+        );
+        setMessages((prev) => prev.filter((m) => !selectedIds.includes(m._id)));
+        toast.success("Messages deleted");
+      } else if (action === "star") {
+        await Promise.all(selectedIds.map((id) => api.post(`/user/message/${id}/star`)));
+        toast.success("Messages starred");
+      } else if (action === "forward") {
+        const first = messages.find((m) => m._id === selectedIds[0]);
+        setForwardMsg(first);
+      }
+      setSelectionMode(false);
+      setSelectedIds([]);
+    } catch {
+      toast.error("Bulk action failed");
+    }
+  };
+
+  const menuItem =
+    "w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-base-200 transition-colors text-left bg-transparent border-0 cursor-pointer";
 
   return (
     <div className="flex flex-col h-full w-full relative">
       {/* Header */}
       <div className="p-4 flex items-center justify-between border-b border-base-content/10 bg-base-200 pt-[calc(env(safe-area-inset-top)+1rem)]">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <button
-            onClick={() => setSelectedFriend(null)}
-            className="md:hidden text-base-content/70 hover:text-base-content transition-colors mr-1 cursor-pointer bg-transparent border-none p-0 outline-none"
+            onClick={() => setSelectedChat(null)}
+            className="md:hidden text-base-content/70 hover:text-base-content transition-colors mr-1 cursor-pointer bg-transparent border-none p-0"
           >
             <ArrowLeft size={20} />
           </button>
-          <div className="relative">
+          <button
+            type="button"
+            onClick={() => isGroup && onOpenGroupInfo?.(selectedChat)}
+            className="relative shrink-0 bg-transparent border-0 p-0 cursor-pointer"
+          >
             <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-lg overflow-hidden border-2 border-base-100">
-              {selectedFriend?.profilePic ? (
-                <img
-                  src={getMediaUrl(selectedFriend.profilePic)}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                />
+              {selectedChat.avatar ? (
+                <img src={getMediaUrl(selectedChat.avatar)} alt="" className="w-full h-full object-cover" />
+              ) : isGroup ? (
+                <Users size={18} />
               ) : (
-                selectedFriend?.fullName?.charAt(0).toUpperCase() ||
-                selectedFriend?.email?.charAt(0).toUpperCase()
+                getInitials(selectedChat.name)
               )}
             </div>
-            {onlineUsers[selectedFriend?._id] && (
-              <div className="absolute top-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-base-200"></div>
+            {!isGroup && onlineUsers[chatId] && (
+              <div className="absolute top-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-base-200" />
             )}
-          </div>
-          <div>
-            <h3 className="font-semibold text-sm">
-              {selectedFriend?.fullName || selectedFriend?.email}
+          </button>
+          <div className="min-w-0">
+            <h3 className="font-semibold text-sm truncate flex items-center gap-1.5">
+              {selectedChat.name}
+              {isMuted && <BellOff size={12} className="text-base-content/50 shrink-0" />}
+              {selectedChat.settings?.pinned && <Pin size={12} className="text-base-content/50 shrink-0" />}
             </h3>
-            <p className="text-xs text-base-content/70">
-              {onlineUsers[selectedFriend?._id] ? "Online" : "Offline"}
+            <p className="text-xs text-base-content/70 truncate flex items-center gap-1.5">
+              {Object.keys(typing).length > 0 ? (
+                <>
+                  <TypingDots /> {headerSubtitle()}
+                </>
+              ) : (
+                headerSubtitle()
+              )}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-4 relative header-menu">
-          {initiateCall && (
+
+        <div className="flex items-center gap-4 relative" ref={menuRef}>
+          {!isGroup && initiateCall && (
             <>
               <button
-                onClick={() => initiateCall(selectedFriend, true)}
+                onClick={() => initiateCall(selectedChat, true)}
                 className="text-primary hover:opacity-80 transition-opacity p-1 bg-transparent border-none outline-none cursor-pointer"
+                aria-label="Video call"
               >
-                <Video size={24} />
+                <Video size={22} />
               </button>
               <button
-                onClick={() => initiateCall(selectedFriend, false)}
+                onClick={() => initiateCall(selectedChat, false)}
                 className="text-primary hover:opacity-80 transition-opacity p-1 bg-transparent border-none outline-none cursor-pointer"
+                aria-label="Voice call"
               >
-                <Phone size={22} />
+                <Phone size={20} />
               </button>
             </>
           )}
           <button
-            onClick={() => setIsHeaderMenuOpen(!isHeaderMenuOpen)}
+            onClick={() => setMenuOpen((v) => !v)}
             className="text-base-content/70 hover:text-base-content transition-colors p-1 bg-transparent border-none outline-none cursor-pointer"
+            aria-label="Chat menu"
           >
             <MoreVertical size={20} />
           </button>
-          {isHeaderMenuOpen && (
-            <div className="absolute top-10 right-8 bg-base-100 border border-base-content/10 rounded-lg shadow-xl z-50 w-36 overflow-hidden">
-              <button
-                onClick={() => {
-                  setIsThemeModalOpen(true);
-                  setIsHeaderMenuOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 text-sm hover:bg-base-200 transition-colors border-none outline-none cursor-pointer"
-              >
-                Theme
+          {menuOpen && (
+            <div className="absolute top-10 right-0 bg-base-100 border border-base-content/10 rounded-lg shadow-xl z-50 w-56 overflow-hidden py-1 max-h-[70vh] overflow-y-auto">
+              {isGroup && (
+                <button className={menuItem} onClick={() => { onOpenGroupInfo?.(selectedChat); setMenuOpen(false); }}>
+                  <Info size={16} /> Group info
+                </button>
+              )}
+              <button className={menuItem} onClick={openStarred}>
+                <Star size={16} /> Starred messages
               </button>
               <button
+                className={menuItem}
                 onClick={() => {
-                  setIsClearChatModalOpen(true);
-                  setIsHeaderMenuOpen(false);
+                  updateChatSetting({ pinned: !selectedChat.settings?.pinned });
+                  setMenuOpen(false);
                 }}
-                className="w-full text-left px-4 py-2 text-sm text-error hover:bg-base-200 transition-colors border-none outline-none cursor-pointer"
               >
-                Clear Chat
+                {selectedChat.settings?.pinned ? <PinOff size={16} /> : <Pin size={16} />}
+                {selectedChat.settings?.pinned ? "Unpin chat" : "Pin chat"}
+              </button>
+              <button
+                className={menuItem}
+                onClick={() => {
+                  updateChatSetting({ archived: !selectedChat.settings?.archived });
+                  setMenuOpen(false);
+                }}
+              >
+                <Archive size={16} />
+                {selectedChat.settings?.archived ? "Unarchive" : "Archive chat"}
+              </button>
+              {!isMuted ? (
+                MUTE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.label}
+                    className={menuItem}
+                    onClick={() => {
+                      updateChatSetting({ mutedUntil: new Date(Date.now() + opt.ms).toISOString() });
+                      setMenuOpen(false);
+                    }}
+                  >
+                    <BellOff size={16} /> {opt.label}
+                  </button>
+                ))
+              ) : (
+                <button
+                  className={menuItem}
+                  onClick={() => {
+                    updateChatSetting({ mutedUntil: null });
+                    setMenuOpen(false);
+                  }}
+                >
+                  <BellOff size={16} /> Unmute notifications
+                </button>
+              )}
+              <div className="menu-dropdown">
+                <details className="group">
+                  <summary className={`${menuItem} list-none [&::-webkit-details-marker]:hidden`}>
+                    <Timer size={16} /> Disappearing messages
+                  </summary>
+                  <div className="pl-6">
+                    {DISAPPEAR_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.hours}
+                        className={`${menuItem} text-xs`}
+                        onClick={() => {
+                          updateChatSetting({ disappearingHours: opt.hours });
+                          setMenuOpen(false);
+                        }}
+                      >
+                        {opt.label}
+                        {selectedChat.settings?.disappearingHours === opt.hours && <CheckCheck size={14} className="ml-auto text-primary" />}
+                      </button>
+                    ))}
+                  </div>
+                </details>
+              </div>
+              <button className={menuItem} onClick={() => { setThemeModal(true); setMenuOpen(false); }}>
+                <Palette size={16} /> Theme
+              </button>
+              {!isGroup && (
+                <button className={`${menuItem} text-error`} onClick={toggleBlock}>
+                  <Ban size={16} /> {selectedChat.blocked ? "Unblock user" : "Block user"}
+                </button>
+              )}
+              <button
+                className={`${menuItem} text-error`}
+                onClick={() => { setClearModal(true); setMenuOpen(false); }}
+              >
+                <Trash2 size={16} /> Clear chat
               </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Theme Modal */}
-      {isThemeModalOpen && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
-          <div className="bg-base-100 p-6 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 border border-base-content/5">
-            <div className="flex justify-between items-center mb-1">
-              <div className="flex items-center gap-2">
-                <Palette size={20} className="text-primary" />
-                <h3 className="font-bold text-xl text-base-content">
-                  Appearance
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsThemeModalOpen(false)}
-                className="btn btn-sm btn-circle btn-ghost hover:bg-base-content/10"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto custom-scrollbar pr-1 -mr-1 pb-2">
-              {[
-                { id: "light", name: "Light Mode", icon: Sun },
-                { id: "dark", name: "Dark Mode", icon: Moon },
-                { id: "black", name: "Midnight", icon: MoonStar },
-                { id: "spotify", name: "Spotify", icon: Music },
-                { id: "claude", name: "Claude", icon: MessageSquare },
-                { id: "corporate", name: "Corporate", icon: Briefcase },
-                { id: "ghibli", name: "Ghibli", icon: Leaf },
-                { id: "pastel", name: "Pastel", icon: Cloud },
-              ].map((theme) => {
-                const Icon = theme.icon;
-                const isActive = (localStorage.getItem("theme") || "dark") === theme.id;
-                
-                return (
-                <button
-                  key={theme.id}
-                  data-theme={theme.id}
-                  onClick={() => {
-                    document.documentElement.setAttribute("data-theme", theme.id);
-                    localStorage.setItem("theme", theme.id);
-                    localStorage.setItem("mingoTheme", theme.id);
-                    setIsThemeModalOpen(false);
-                  }}
-                  className={`relative flex items-center justify-between w-full p-4 rounded-2xl transition-all duration-300 overflow-hidden group border-2 bg-base-100 text-base-content ${
-                    isActive 
-                      ? "border-primary shadow-xl scale-[1.02] ring-4 ring-primary/10 z-10" 
-                      : "border-transparent hover:border-primary/30 hover:scale-[1.01] shadow-sm hover:shadow-md"
-                  }`}
-                >
-                  <div className="flex items-center gap-4 relative z-10">
-                    <div className="p-2.5 rounded-xl bg-primary text-primary-content shadow-sm group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-                      <Icon size={22} />
-                    </div>
-                    <div className="flex flex-col items-start">
-                       <span className="font-bold text-base tracking-tight">{theme.name}</span>
-                       <div className="flex gap-1.5 mt-1.5">
-                          <div className="w-3.5 h-3.5 rounded-full bg-primary shadow-sm" title="Primary"></div>
-                          <div className="w-3.5 h-3.5 rounded-full bg-secondary shadow-sm" title="Secondary"></div>
-                          <div className="w-3.5 h-3.5 rounded-full bg-accent shadow-sm" title="Accent"></div>
-                          <div className="w-3.5 h-3.5 rounded-full bg-neutral shadow-sm" title="Neutral"></div>
-                       </div>
-                    </div>
-                  </div>
-                  
-                  {isActive && (
-                    <div className="relative z-10 bg-primary text-primary-content rounded-full p-1.5 shadow-md animate-in zoom-in duration-300">
-                      <Check size={18} strokeWidth={3} />
-                    </div>
-                  )}
-                  
-                  {/* Decorative background element to show off base-200/base-300 */}
-                  <div className="absolute right-0 top-0 bottom-0 w-32 bg-linear-to-l from-base-200 to-transparent z-0 opacity-80"></div>
-                </button>
-              )})}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Clear Chat Confirmation Modal */}
-      {isClearChatModalOpen && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-base-100 p-6 rounded-2xl shadow-xl w-full max-w-sm flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="font-semibold text-lg text-base-content mb-2">
-              Clear Chat?
-            </h3>
-            <p className="text-base-content/70 text-sm">
-              Are you sure you want to clear this chat? This action cannot be
-              undone.
-            </p>
-            <div className="flex gap-3 mt-4">
-              <button
-                onClick={() => setIsClearChatModalOpen(false)}
-                className="btn btn-ghost flex-1 rounded-xl"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleClearChat}
-                className="btn btn-error flex-1 rounded-xl"
-              >
-                Clear Chat
-              </button>
-            </div>
-          </div>
+      {/* Selection mode bar */}
+      {selectionMode && (
+        <div className="flex items-center gap-3 px-4 py-2 bg-base-200 border-b border-base-content/10">
+          <button onClick={() => { setSelectionMode(false); setSelectedIds([]); }} className="btn btn-ghost btn-circle btn-sm">
+            <X size={18} />
+          </button>
+          <span className="text-sm font-medium flex-1">{selectedIds.length} selected</span>
+          <button onClick={() => bulkAction("star")} className="btn btn-ghost btn-sm" disabled={!selectedIds.length}>
+            <Star size={18} />
+          </button>
+          <button onClick={() => bulkAction("forward")} className="btn btn-ghost btn-sm" disabled={selectedIds.length !== 1}>
+            <Forward size={18} />
+          </button>
+          <button onClick={() => bulkAction("delete")} className="btn btn-ghost btn-sm text-error" disabled={!selectedIds.length}>
+            <Trash2 size={18} />
+          </button>
         </div>
       )}
 
       {/* Messages */}
-          <div className="flex-1 relative overflow-hidden chat-background">
-            <div className="absolute inset-0 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-            {(() => {
-              let lastDate = null;
-              return filteredChatData.map((chat) => {
-                const isMe = chat.senderId === user._id;
-                const emojiOnly =
-                  chat.messageType === "text" && isEmojiOnly(chat.message);
-                const isMediaOnly =
-                  (chat.messageType === "image" ||
-                    chat.messageType === "video") &&
-                  (!chat.message || chat.message === "Sent an attachment");
+      <div className="flex-1 relative overflow-hidden chat-background">
+        <div ref={scrollContainerRef} className="absolute inset-0 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+          {hasMore && (
+            <div className="flex justify-center">
+              <button
+                onClick={loadOlder}
+                disabled={loadingOlder}
+                className="btn btn-sm btn-ghost border border-base-content/10"
+              >
+                {loadingOlder ? (
+                  <span className="loading loading-spinner loading-xs" />
+                ) : (
+                  "Load older messages"
+                )}
+              </button>
+            </div>
+          )}
+          {messages.length === 0 && (
+            <div className="h-full flex items-center justify-center text-base-content/40 text-sm">
+              No messages yet — say hello 👋
+            </div>
+          )}
+          {renderMessages()}
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
 
-                const chatDateObj = chat.createdAt
-                  ? new Date(chat.createdAt)
-                  : new Date(chat.timestamp || Date.now());
-                const chatDate = chatDateObj.toLocaleDateString();
-                const isNewDate = lastDate !== chatDate;
-                lastDate = chatDate;
+      <MessageInput
+        chat={selectedChat}
+        replyTo={replyTo}
+        clearReply={() => setReplyTo(null)}
+        editTarget={editTarget}
+        clearEdit={() => setEditTarget(null)}
+        onSendText={sendText}
+        onSendFile={sendFile}
+        onEditText={editText}
+        disabled={sendDisabled || selectedChat.blocked}
+        disabledReason={
+          sendDisabled
+            ? "Only admins can send messages in this group"
+            : "You blocked this contact — unblock to message"
+        }
+      />
 
-                let dateLabel = chatDate;
-                const today = new Date().toLocaleDateString();
-                const yesterday = new Date(
-                  Date.now() - 86400000,
-                ).toLocaleDateString();
-                if (chatDate === today) dateLabel = "Today";
-                else if (chatDate === yesterday) dateLabel = "Yesterday";
+      <ForwardModal open={!!forwardMsg} onClose={() => setForwardMsg(null)} message={forwardMsg} />
 
-                return (
-                  <React.Fragment key={chat._id}>
-                    {isNewDate && (
-                      <div className="w-full flex justify-center my-4">
-                        <span className="bg-base-200/80 backdrop-blur-sm px-3 py-1 rounded-full text-xs text-base-content/70 shadow-sm border border-base-content/10 font-medium">
-                          {dateLabel}
-                        </span>
-                      </div>
-                    )}
-                    <div
-                      className={`chat ${isMe ? "chat-sender" : "chat-receiver"} group relative`}
-                    >
-                      <div className="chat-avatar avatar">
-                        <div className="w-10 h-10 rounded-full border border-base-content/10 overflow-hidden">
-                          <img
-                            src={
-                              isMe
-                                ? user?.profilePic
-                                  ? getMediaUrl(user.profilePic)
-                                  : `https://ui-avatars.com/api/?name=${user?.fullName}`
-                                : selectedFriend?.profilePic
-                                  ? getMediaUrl(selectedFriend.profilePic)
-                                  : `https://ui-avatars.com/api/?name=${selectedFriend?.fullName}`
-                            }
-                            alt="avatar"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      </div>
-                      <div
-                        onDoubleClick={() => setShowDeleteModal(chat._id)}
-                        className={`chat-bubble relative cursor-pointer shadow-sm ${isMediaOnly ? "p-1.5!" : ""} ${isMe ? "bg-[#dcf8c6] text-black" : "bg-white text-black"} ${emojiOnly ? "bg-transparent! shadow-none! text-5xl p-0" : ""}`}
-                      >
-                        <div
-                          className={`flex flex-wrap items-end gap-x-3 gap-y-1 ${emojiOnly ? "flex-col" : ""}`}
-                        >
-                          <div className={emojiOnly ? "mb-2" : "wrap-break-word"}>
-                            {renderMessageContent(chat, emojiOnly)}
-                          </div>
-
-                          <div
-                            className={`flex items-center gap-1 text-[10px] select-none whitespace-nowrap ml-auto ${isMediaOnly ? "absolute bottom-2.5 right-2.5 bg-black/50 text-white rounded-full px-2 py-0.5 backdrop-blur-sm" : emojiOnly ? "absolute -bottom-3 right-0 bg-base-100/80 backdrop-blur-md rounded-full px-1.5 py-0.5 shadow-sm text-base-content/80" : "opacity-70"}`}
-                          >
-                            <time>
-                              {chat.createdAt
-                                ? new Date(chat.createdAt).toLocaleTimeString(
-                                    [],
-                                    { hour: "2-digit", minute: "2-digit" },
-                                  )
-                                : chat.timestamp}
-                            </time>
-                            {isMe &&
-                              (chat.isRead ? (
-                                <CheckCheck
-                                  size={14}
-                                  className={
-                                    isMediaOnly
-                                      ? "text-info"
-                                      : emojiOnly
-                                        ? "text-primary"
-                                        : isMe
-                                          ? "text-white"
-                                          : "text-info"
-                                  }
-                                />
-                              ) : (
-                                <Check size={14} />
-                              ))}
-                          </div>
-                        </div>
-                      </div>
-
-                      {showDeleteModal === chat._id && (
-                        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 px-4">
-                          <div className="delete-modal bg-base-100 p-6 rounded-2xl shadow-xl w-full max-w-sm flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200">
-                            <h3 className="font-semibold text-lg text-base-content mb-2">
-                              Delete message?
-                            </h3>
-                            {isMe && (
-                              <button
-                                onClick={() => {
-                                  handleDeleteMessage(chat._id, "for_everyone");
-                                  setShowDeleteModal(null);
-                                }}
-                                className="btn btn-error btn-outline w-full rounded-xl"
-                              >
-                                Delete for everyone
-                              </button>
-                            )}
-                            <button
-                              onClick={() => {
-                                handleDeleteMessage(chat._id, "for_me");
-                                setShowDeleteModal(null);
-                              }}
-                              className="btn btn-base-300 w-full rounded-xl"
-                            >
-                              Delete for me
-                            </button>
-                            <button
-                              onClick={() => setShowDeleteModal(null)}
-                              className="btn btn-ghost w-full rounded-xl"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </React.Fragment>
-                );
-              });
-            })()}
-            <div ref={messagesEndRef} />
+      {/* Delete confirmation */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-base-100 p-6 rounded-2xl shadow-xl w-full max-w-sm flex flex-col gap-3">
+            <h3 className="font-semibold text-lg">Delete message?</h3>
+            <div className="flex flex-col gap-2">
+              {deleteTarget.type === "for_everyone" && (
+                <button onClick={confirmDelete} className="btn btn-error btn-outline w-full">
+                  Delete for everyone
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  setDeleteTarget({ ...deleteTarget, type: "for_me" });
+                  setTimeout(confirmDelete, 0);
+                }}
+                className="btn w-full"
+              >
+                Delete for me
+              </button>
+              <button onClick={() => setDeleteTarget(null)} className="btn btn-ghost w-full">
+                Cancel
+              </button>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Input */}
-          <div className="p-3 bg-base-100 border-t border-base-content/10 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
-            <form
-              onSubmit={(e) => handleMessageSend(e, "text")}
-              className="flex items-center gap-1 sm:gap-2 bg-base-200 rounded-full p-1 sm:p-1.5 border border-base-content/10 shadow-sm relative"
-            >
-              {/* Attachment Menu */}
-              <div className="relative" ref={attachmentRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsAttachmentOpen(!isAttachmentOpen)}
-                  className="p-2.5 bg-base-content/10 rounded-full text-base-content/70 hover:text-base-content transition-colors cursor-pointer border-none outline-none"
-                >
-                  <Plus
-                    size={20}
-                    className={`transition-transform duration-300 ${isAttachmentOpen ? "rotate-45" : ""}`}
-                  />
-                </button>
-
-                {isAttachmentOpen && (
-                  <div className="absolute bottom-14 left-0 bg-base-100 border border-base-content/10 rounded-2xl shadow-2xl p-4 flex flex-col gap-1.5 w-56 z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        fileInputRef.current.accept = "*/*";
-                        fileInputRef.current.click();
-                      }}
-                      className="flex items-center gap-4 hover:bg-base-200 p-2.5 rounded-xl transition-all text-left text-sm font-medium text-base-content"
-                    >
-                      <div className="bg-[#7F66FF] text-white p-2.5 rounded-full shadow-sm">
-                        <FileText size={18} />
-                      </div>{" "}
-                      Document
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        fileInputRef.current.accept = "image/*,video/*";
-                        fileInputRef.current.click();
-                      }}
-                      className="flex items-center gap-4 hover:bg-base-200 p-2.5 rounded-xl transition-all text-left text-sm font-medium text-base-content"
-                    >
-                      <div className="bg-[#007BFF] text-white p-2.5 rounded-full shadow-sm">
-                        <ImageIcon size={18} />
-                      </div>{" "}
-                      Photo & Video
-                    </button>
-                    <button
-                      type="button"
-                      className="flex items-center gap-4 hover:bg-base-200 p-2.5 rounded-xl transition-all text-left text-sm font-medium text-base-content opacity-50 cursor-not-allowed"
-                    >
-                      <div className="bg-[#FF3B30] text-white p-2.5 rounded-full shadow-sm">
-                        <Camera size={18} />
-                      </div>{" "}
-                      Camera
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        fileInputRef.current.accept = "audio/*";
-                        fileInputRef.current.click();
-                      }}
-                      className="flex items-center gap-4 hover:bg-base-200 p-2.5 rounded-xl transition-all text-left text-sm font-medium text-base-content"
-                    >
-                      <div className="bg-[#FF9500] text-white p-2.5 rounded-full shadow-sm">
-                        <Music size={18} />
-                      </div>{" "}
-                      Audio
-                    </button>
-
-                  </div>
-                )}
-
-                <input
-                  type="file"
-                  className="hidden"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                />
-              </div>
-
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                  className="p-2 text-base-content/70 hover:text-base-content transition-colors"
-                >
-                  <Smile size={20} />
-                </button>
-                {showEmojiPicker && (
-                  <div className="absolute bottom-12 left-0 z-50 shadow-2xl">
-                    <EmojiPicker
-                      onEmojiClick={(emojiData) =>
-                        setMessage((prev) => prev + emojiData.emoji)
-                      }
-                      theme={
-                        localStorage.getItem("theme") === "dark" ||
-                        localStorage.getItem("theme") === "black"
-                          ? "dark"
-                          : "light"
-                      }
-                    />
-                  </div>
-                )}
-              </div>
-
-              {isRecording ? (
-                <div className="flex-1 flex items-center gap-3 px-3 text-error animate-pulse">
-                  <div className="w-2.5 h-2.5 rounded-full bg-error"></div>
-                  <span className="text-sm font-medium">
-                    Recording... {Math.floor(recordingTime / 60)}:
-                    {(recordingTime % 60).toString().padStart(2, "0")}
-                  </span>
-                </div>
-              ) : (
-                <input
-                  type="text"
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Type your message..."
-                  className="flex-1 bg-transparent text-base-content outline-none px-3 text-sm placeholder:text-base-content/50"
-                />
-              )}
-
-              {isRecording ? (
-                <button
-                  type="button"
-                  onClick={stopRecording}
-                  className="p-2.5 bg-error text-error-content rounded-full hover:brightness-110 transition-colors flex items-center justify-center mr-1 shadow-md shadow-error/20"
-                >
-                  <StopCircle size={18} />
-                </button>
-              ) : message.trim() ? (
-                <button
-                  type="submit"
-                  className="p-2.5 bg-primary text-primary-content rounded-full hover:brightness-110 transition-colors flex items-center justify-center mr-1 shadow-md shadow-primary/20"
-                >
-                  <Send size={18} />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={startRecording}
-                  className="p-2.5 bg-success text-success-content rounded-full hover:brightness-110 transition-colors flex items-center justify-center mr-1 shadow-md shadow-success/20"
-                >
-                  <Mic size={18} />
-                </button>
-              )}
-            </form>
+      {/* Clear chat */}
+      {clearModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-base-100 p-6 rounded-2xl shadow-xl w-full max-w-sm flex flex-col gap-3">
+            <h3 className="font-semibold text-lg">Clear Chat?</h3>
+            <p className="text-base-content/70 text-sm">This removes the chat history on this device.</p>
+            <div className="flex gap-3 mt-2">
+              <button onClick={() => setClearModal(false)} className="btn btn-ghost flex-1">Cancel</button>
+              <button onClick={clearChat} className="btn btn-error flex-1">Clear</button>
+            </div>
           </div>
+        </div>
+      )}
 
+      {/* Theme modal */}
+      {themeModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
+          <div className="bg-base-100 p-6 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col gap-4">
+            <div className="flex justify-between items-center">
+              <h3 className="font-bold text-xl flex items-center gap-2">
+                <Palette size={20} className="text-primary" /> Appearance
+              </h3>
+              <button onClick={() => setThemeModal(false)} className="btn btn-sm btn-circle btn-ghost">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto custom-scrollbar">
+              {THEMES.map((t) => {
+                const Icon = t.icon;
+                const active = (localStorage.getItem("theme") || "dark") === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      document.documentElement.setAttribute("data-theme", t.id);
+                      localStorage.setItem("theme", t.id);
+                      setThemeModal(false);
+                    }}
+                    className={`flex items-center gap-3 p-3 rounded-2xl border-2 transition-all ${
+                      active ? "border-primary ring-2 ring-primary/20" : "border-transparent hover:border-primary/30"
+                    }`}
+                  >
+                    <div className="p-2 rounded-xl bg-primary text-primary-content">
+                      <Icon size={18} />
+                    </div>
+                    <span className="font-medium text-sm flex-1 text-left">{t.name}</span>
+                    {active && <CheckCheck size={16} className="text-primary" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Starred messages */}
+      {starredOpen && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-base-100 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[80vh]">
+            <div className="p-4 border-b border-base-content/10 flex items-center justify-between">
+              <h3 className="font-bold flex items-center gap-2">
+                <Star size={18} className="fill-amber-400 text-amber-500" /> Starred Messages
+              </h3>
+              <button onClick={() => setStarredOpen(false)} className="btn btn-sm btn-circle btn-ghost">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {starred.length === 0 && (
+                <p className="text-center text-sm text-base-content/50 py-8">No starred messages yet</p>
+              )}
+              {starred.map((m) => (
+                <div key={m._id} className="p-3 rounded-xl bg-base-200 text-sm">
+                  <p className="whitespace-pre-wrap break-words">
+                    {m.isDeletedForEveryone ? "🚫 This message was deleted" : m.message}
+                  </p>
+                  <p className="text-[10px] opacity-60 mt-1">
+                    {new Date(m.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
