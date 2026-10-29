@@ -166,3 +166,259 @@ html, body {
     filter: invert(0);
     opacity: 0.5;
 }
+
+/* ==================== UNIVERSAL THEME ENGINE ==================== */
+:root,
+[data-theme='dark'] {
+    --wa-bg: #111b21;
+    --wa-header: #202c33;
+    --wa-sidebar: #111b21;
+    --wa-rail: #202c33;
+    --wa-border: #222e35;
+    --wa-text: #e9edef;
+    --wa-muted: #8696a0;
+    --wa-hover: #202c33;
+    --wa-active: #2a3942;
+    --wa-input: #202c33;
+    --wa-accent: #00a884;
+    --wa-accent-hover: #06cf9c;
+    --wa-bubble-out: #005c4b;
+    --wa-bubble-out-text: #e9edef;
+    --wa-bubble-in: #202c33;
+    --wa-bubble-in-text: #e9edef;
+    --wa-chat-empty: #0b141a;
+    --wa-card: #202c33;
+    /* FlyonUI / DaisyUI semantics */
+    --b1: 204 33% 10%;
+    --b2: 204 23% 16%;
+    --b3: 204 22% 20%;
+    --bc: 200 15% 93%;
+    --p: 168 100% 33%;
+    --pc: 0 0% 100%;
+}
+
+[data-theme='light'] {
+    --wa-bg: #ffffff;
+    --wa-header: #f0f2f5;
+    --wa-sidebar: #ffffff;
+    --wa-rail: #f0f2f5;
+    --wa-border: #e9edef;
+    --wa-text: #111b21;
+    --wa-muted: #667781;
+    --wa-hover: #f5f6f6;
+    --wa-active: #eaebeb;
+    --wa-input: #f0f2f5;
+    --wa-accent: #00a884;
+    --wa-accent-hover: #02906f;
+    --wa-bubble-out: #d9fdd3;
+    --wa-bubble-out-text: #111b21;
+    --wa-bubble-in: #ffffff;
+    --wa-bubble-in-text: #111b21;
+    --wa-chat-empty: #efeae2;
+    --wa-card: #ffffff;
+    /* FlyonUI / DaisyUI semantics */
+    --b1: 0 0% 100%;
+    --b2: 210 20% 96%;
+    --b3: 210 16% 92%;
+    --bc: 204 33% 10%;
+    --p: 168 100% 33%;
+    --pc: 0 0% 100%;
+}
+
+[data-theme='black'] {
+    --wa-bg: #000000;
+    --wa-header: #121212;
+    --wa-sidebar: #000000;
+    --wa-rail: #121212;
+    --wa-border: #262626;
+    --wa-text: #f5f5f5;
+    --wa-muted: #a3a3a3;
+    --wa-hover: #1c1c1c;
+    --wa-active: #2a2a2a;
+    --wa-input: #181818;
+    --wa-accent: #00a884;
+    --wa-accent-hover: #06cf9c;
+    --wa-bubble-out: #025141;
+    --wa-bubble-out-text: #f5f5f5;
+    --wa-bubble-in: #1c1c1c;
+    --wa-bubble-in-text: #f5f5f5;
+    --wa-chat-empty: #050505;
+    --wa-card: #141414;
+}
+
+[data-theme='spotify'] {
+    --wa-bg: #121212;
+    --wa-header: #181818;
+    --wa-sidebar: #121212;
+    --wa-rail: #181818;
+    --wa-border: #282828;
+    --wa-text: #ffffff;
+    --wa-muted: #b3b3b3;
+    --wa-hover: #222222;
+    --wa-active: #2e2e2e;
+    --wa-input: #1e1e1e;
+    --wa-accent: #1db954;
+    --wa-accent-hover: #1ed760;
+    --wa-bubble-out: #155724;
+    --wa-bubble-out-text: #ffffff;
+    --wa-bubble-in: #222222;
+    --wa-bubble-in-text: #ffffff;
+    --wa-chat-empty: #0a0a0a;
+    --wa-card: #181818;
+}
+
+[data-theme='claude'] {
+    --wa-bg: #fbfaf8;
+    --wa-header: #f3eee8;
+    --wa-sidebar: #fbfaf8;
+    --wa-rail: #f3eee8;
+    --wa-border: #e7ded5;
+    --wa-text: #2d2825;
+    --wa-muted: #796e65;
+    --wa-hover: #f5ede6;
+    --wa-active: #ebe0d6;
+    --wa-input: #f3eee8;
+    --wa-accent: #d97757;
+    --wa-accent-hover: #c25e3e;
+    --wa-bubble-out: #f0dfd5;
+    --wa-bubble-out-text: #2d2825;
+    --wa-bubble-in: #ffffff;
+    --wa-bubble-in-text: #2d2825;
+    --wa-chat-empty: #f8f3ee;
+    --wa-card: #ffffff;
+}
+
+[data-theme='corporate'] {
+    --wa-bg: #f8fafc;
+    --wa-header: #f1f5f9;
+    --wa-sidebar: #ffffff;
+    --wa-rail: #f1f5f9;
+    --wa-border: #e2e8f0;
+    --wa-text: #0f172a;
+    --wa-muted: #64748b;
+    --wa-hover: #f1f5f9;
+    --wa-active: #e2e8f0;
+    --wa-input: #f1f5f9;
+    --wa-accent: #2563eb;
+    --wa-accent-hover: #1d4ed8;
+    --wa-bubble-out: #dbeafe;
+    --wa-bubble-out-text: #0f172a;
+    --wa-bubble-in: #ffffff;
+    --wa-bubble-in-text: #0f172a;
+    --wa-chat-empty: #f1f5f9;
+    --wa-card: #ffffff;
+}
+
+[data-theme='ghibli'] {
+    --wa-bg: #f4f7f4;
+    --wa-header: #e8efe8;
+    --wa-sidebar: #f4f7f4;
+    --wa-rail: #e8efe8;
+    --wa-border: #d5e0d5;
+    --wa-text: #1c281c;
+    --wa-muted: #5c6e5c;
+    --wa-hover: #eaf0ea;
+    --wa-active: #dce5dc;
+    --wa-input: #e8efe8;
+    --wa-accent: #059669;
+    --wa-accent-hover: #047857;
+    --wa-bubble-out: #dcf0dc;
+    --wa-bubble-out-text: #1c281c;
+    --wa-bubble-in: #ffffff;
+    --wa-bubble-in-text: #1c281c;
+    --wa-chat-empty: #edf2ed;
+    --wa-card: #ffffff;
+}
+
+[data-theme='pastel'] {
+    --wa-bg: #faf5ff;
+    --wa-header: #f3e8ff;
+    --wa-sidebar: #faf5ff;
+    --wa-rail: #f3e8ff;
+    --wa-border: #e9d5ff;
+    --wa-text: #3b0764;
+    --wa-muted: #7e22ce;
+    --wa-hover: #f5f0ff;
+    --wa-active: #ebd8fc;
+    --wa-input: #f3e8ff;
+    --wa-accent: #a855f7;
+    --wa-accent-hover: #9333ea;
+    --wa-bubble-out: #f5d0fe;
+    --wa-bubble-out-text: #3b0764;
+    --wa-bubble-in: #ffffff;
+    --wa-bubble-in-text: #3b0764;
+    --wa-chat-empty: #f8f0fc;
+    --wa-card: #ffffff;
+}
+
+[data-theme='halloween'] {
+    --wa-bg: #1a1625;
+    --wa-header: #2d233d;
+    --wa-sidebar: #1a1625;
+    --wa-rail: #2d233d;
+    --wa-border: #3f3254;
+    --wa-text: #f3f0f7;
+    --wa-muted: #a79bbb;
+    --wa-hover: #2d233d;
+    --wa-active: #3e3153;
+    --wa-input: #2d233d;
+    --wa-accent: #f97316;
+    --wa-accent-hover: #ea580c;
+    --wa-bubble-out: #68349a;
+    --wa-bubble-out-text: #ffffff;
+    --wa-bubble-in: #2d233d;
+    --wa-bubble-in-text: #ffffff;
+    --wa-chat-empty: #130f1c;
+    --wa-card: #2d233d;
+}
+
+/* ==================== PROJECT-WIDE THEME APPLICATION ==================== */
+/* Dynamically maps all layout backgrounds, sidebars, rails, borders and text */
+.bg-\[\#111b21\] { background-color: var(--wa-bg) !important; }
+.bg-\[\#202c33\] { background-color: var(--wa-header) !important; }
+.bg-\[\#0b141a\] { background-color: var(--wa-chat-empty) !important; }
+.bg-\[\#2a3942\] { background-color: var(--wa-hover) !important; }
+.bg-\[\#222e35\]\/20 { background-color: transparent !important; }
+.border-\[\#222e35\] { border-color: var(--wa-border) !important; }
+.border-\[\#2a3942\] { border-color: var(--wa-border) !important; }
+.border-\[\#222e35\]\/60 { border-color: var(--wa-border) !important; }
+.border-\[\#222e35\]\/50 { border-color: var(--wa-border) !important; }
+.border-\[\#222e35\]\/40 { border-color: var(--wa-border) !important; }
+.text-\[\#e9edef\] { color: var(--wa-text) !important; }
+.text-\[\#8696a0\] { color: var(--wa-muted) !important; }
+.text-\[\#aebac1\] { color: var(--wa-muted) !important; }
+.text-\[\#d1d7db\] { color: var(--wa-text) !important; }
+
+/* Interactive hover styles */
+.hover\:bg-\[\#202c33\]:hover { background-color: var(--wa-hover) !important; }
+.hover\:bg-\[\#374248\]:hover { background-color: var(--wa-hover) !important; }
+.hover\:bg-\[\#2a3942\]:hover { background-color: var(--wa-hover) !important; }
+.hover\:text-\[\#e9edef\]:hover { color: var(--wa-text) !important; }
+
+/* Chat Message Bubbles Dynamic Theming */
+.chat-bubble-me {
+    background-color: var(--wa-bubble-out) !important;
+    color: var(--wa-bubble-out-text) !important;
+}
+.chat-bubble-friend {
+    background-color: var(--wa-bubble-in) !important;
+    color: var(--wa-bubble-in-text) !important;
+}
+
+/* WhatsApp Custom Scrollbar */
+.whatsapp-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.whatsapp-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.whatsapp-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--wa-muted);
+    opacity: 0.3;
+    border-radius: 9999px;
+}
+.whatsapp-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--wa-muted);
+    opacity: 0.6;
+}

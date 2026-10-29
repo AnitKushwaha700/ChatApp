@@ -10,6 +10,8 @@ import InstallPrompt from "./components/InstallPrompt";
 import { WifiOff } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
+import { applyTheme } from "./lib/theme";
+
 const OfflineBanner = () => {
   const [isOffline, setIsOffline] = React.useState(!navigator.onLine);
 
@@ -46,8 +48,8 @@ const App = () => {
   const path = useLocation().pathname;
 
   React.useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") || "light";
-    document.documentElement.setAttribute("data-theme", savedTheme);
+    const savedTheme = localStorage.getItem("theme") || "dark";
+    applyTheme(savedTheme, false);
   }, []);
 
   return (
