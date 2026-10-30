@@ -9,6 +9,8 @@ import morgan from "morgan";
 import connectDB from "./src/core/database/db.js";
 import AuthRouter from "./src/modules/auth/authRouter.js";
 import UserRouter from "./src/modules/user/userRouter.js";
+import ChatRouter from "./src/modules/chat/chatRouter.js";
+import StatusRouter from "./src/modules/status/statusRouter.js";
 
 import http from "http";
 import { Server } from "socket.io";
@@ -66,6 +68,10 @@ app.use("/public", express.static(path.join(process.cwd(), "public")));
 // Routes
 app.use("/auth", AuthRouter);
 app.use("/user", UserRouter);
+app.use("/chat", ChatRouter);
+app.use("/api/chats", ChatRouter);
+app.use("/status", StatusRouter);
+app.use("/api/status", StatusRouter);
 
 // Health check
 app.get("/", (req, res) => {
