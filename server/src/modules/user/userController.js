@@ -48,12 +48,15 @@ export const updateProfile = async (req, res, next) => {
   try {
     const currentUser = req.user;
 
-    const { fullName, email, mobileNumber } = req.body;
+    const { fullName, email, mobileNumber, about, privacy, theme, wallpaper, blockedUsers } = req.body;
 
     if (
       (fullName !== undefined && typeof fullName !== "string") ||
       (email !== undefined && typeof email !== "string") ||
-      (mobileNumber !== undefined && typeof mobileNumber !== "string")
+      (mobileNumber !== undefined && typeof mobileNumber !== "string") ||
+      (about !== undefined && typeof about !== "string") ||
+      (theme !== undefined && typeof theme !== "string") ||
+      (wallpaper !== undefined && typeof wallpaper !== "string")
     ) {
       const error = new Error("Invalid input formats");
       error.statusCode = 400;
@@ -78,14 +81,39 @@ export const updateProfile = async (req, res, next) => {
       }
     }
 
+    let parsedPrivacy = undefined;
+    if (privacy !== undefined) {
+      try {
+        parsedPrivacy = typeof privacy === "string" ? JSON.parse(privacy) : privacy;
+      } catch {
+        parsedPrivacy = privacy;
+      }
+    }
+
+    let parsedBlockedUsers = undefined;
+    if (blockedUsers !== undefined) {
+      try {
+        parsedBlockedUsers = typeof blockedUsers === "string" ? JSON.parse(blockedUsers) : blockedUsers;
+      } catch {
+        parsedBlockedUsers = blockedUsers;
+      }
+    }
+
+    const updateFields = {
+      ...(fullName && { fullName }),
+      ...(email && { email }),
+      ...(mobileNumber !== undefined && { mobileNumber }),
+      ...(profilePicUrl && { profilePic: profilePicUrl }),
+      ...(about !== undefined && { about }),
+      ...(theme !== undefined && { theme }),
+      ...(wallpaper !== undefined && { wallpaper }),
+      ...(parsedPrivacy !== undefined && { privacy: parsedPrivacy }),
+      ...(parsedBlockedUsers !== undefined && { blockedUsers: parsedBlockedUsers }),
+    };
+
     const updatedUser = await User.findByIdAndUpdate(
       currentUser._id,
-      {
-        ...(fullName && { fullName }),
-        ...(email && { email }),
-        ...(mobileNumber !== undefined && { mobileNumber }),
-        ...(profilePicUrl && { profilePic: profilePicUrl }),
-      },
+      updateFields,
       { new: true },
     ).select("-password");
 
