@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import User from "../../modules/user/userModel.js";
 
 export const OnlineUsers = {};
 let ioInstance = null;
@@ -31,26 +32,91 @@ const WebSocket = (io) => {
   });
 
   io.on("connection", (socket) => {
-    // We use the authenticated socket.userID
-    socket.on("createPath", () => {
-      if (socket.userID) {
-        OnlineUsers[socket.userID] = socket.id;
+    // Authenticated socket.userID or passed userId
+    socket.on("createPath", async (userId) => {
+      const currentId = socket.userID || userId;
+      if (currentId) {
+        socket.userID = currentId;
+        OnlineUsers[currentId] = socket.id;
         io.emit("onlineUsers", OnlineUsers);
+        try {
+          await User.findByIdAndUpdate(currentId, {
+            isOnline: true,
+            lastSeen: new Date(),
+          });
+        } catch (e) {
+          console.error("Failed to update user online status", e.message);
+        }
       }
     });
 
-    socket.on("destroyPath", () => {
-      if (socket.userID) {
-        delete OnlineUsers[socket.userID];
+    socket.on("destroyPath", async (userId) => {
+      const currentId = socket.userID || userId;
+      if (currentId) {
+        delete OnlineUsers[currentId];
         io.emit("onlineUsers", OnlineUsers);
+        try {
+          await User.findByIdAndUpdate(currentId, {
+            isOnline: false,
+            lastSeen: new Date(),
+          });
+        } catch (e) {
+          console.error("Failed to update user offline status", e.message);
+        }
       }
     });
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
       if (socket.userID) {
         delete OnlineUsers[socket.userID];
         console.log("Online Users:", OnlineUsers);
         io.emit("onlineUsers", OnlineUsers);
+        try {
+          await User.findByIdAndUpdate(socket.userID, {
+            isOnline: false,
+            lastSeen: new Date(),
+          });
+        } catch (e) {
+          console.error("Failed to update user offline status", e.message);
+        }
+      }
+    });
+
+    // Chat Rooms for 1-to-1 & Groups
+    socket.on("join-chat", (chatId) => {
+      if (chatId) socket.join(chatId.toString());
+    });
+
+    socket.on("leave-chat", (chatId) => {
+      if (chatId) socket.leave(chatId.toString());
+    });
+
+    // Real-Time Typing Indicators
+    socket.on("typing", ({ to }) => {
+      if (!to) return;
+      const receiverSocketId = OnlineUsers[to];
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("typing", { from: socket.userID });
+      }
+    });
+
+    socket.on("stop-typing", ({ to }) => {
+      if (!to) return;
+      const receiverSocketId = OnlineUsers[to];
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("stop-typing", { from: socket.userID });
+      }
+    });
+
+    // Real-Time Read Receipts Trigger
+    socket.on("mark-read", ({ from }) => {
+      if (!from) return;
+      const senderSocketId = OnlineUsers[from];
+      if (senderSocketId) {
+        io.to(senderSocketId).emit("messagesRead", {
+          friendId: socket.userID,
+          readBy: socket.userID,
+        });
       }
     });
 
