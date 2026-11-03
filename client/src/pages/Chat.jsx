@@ -1,39 +1,53 @@
-import { useEffect, useState, useCallback } from "react";
-import Chatting from "../features/chat/Chatting";
-import ProfileModal from "../features/profile/ProfileModal";
-import CallModal from "../features/chat/CallModal";
-import { useAuth } from "../features/auth/AuthContext";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { Lock, MessageSquare, ShieldCheck } from "lucide-react";
 import api from "../lib/api";
 import socketAPI from "../lib/webSocket";
-import { LogOut, Search, Edit3 } from "lucide-react";
+import { useAuth } from "../features/auth/AuthContext";
 
-const getMediaUrl = (url) => {
-  if (!url) return "";
-  return url.startsWith("http") ? url : `${api.defaults.baseURL}${url}`;
-};
+// WhatsApp Feature Subcomponents
+import NavigationRail from "../features/chat/NavigationRail";
+import ChatSidebar from "../features/chat/ChatSidebar";
+import Chatting from "../features/chat/Chatting";
+import StatusDrawer from "../features/chat/StatusDrawer";
+import StatusViewer from "../features/chat/StatusViewer";
+import NewChatDrawer from "../features/chat/NewChatDrawer";
+import NewGroupDrawer from "../features/chat/NewGroupDrawer";
+import GroupInfoDrawer from "../features/chat/GroupInfoDrawer";
+import ProfileSettingsDrawer from "../features/chat/ProfileSettingsDrawer";
+import ThemeModal from "../features/chat/ThemeModal";
+import CallModal from "../features/chat/CallModal";
+import { applyTheme, getSavedTheme } from "../lib/theme";
 
 const Chat = () => {
   const navigate = useNavigate();
   const { user, isLogin, setUser, setIsLogin } = useAuth();
-  const [recentUser, setRecentUser] = useState([]);
+
+  // Active chat & interaction states
   const [selectedFriend, setSelectedFriend] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState({});
+  const [typingUsers, setTypingUsers] = useState({});
+  const [allUsers, setAllUsers] = useState([]);
+
+  // Drawers and navigation tabs
+  const [activeRailTab, setActiveRailTab] = useState("chats");
+  const [isStatusDrawerOpen, setIsStatusDrawerOpen] = useState(false);
+  const [activeStatusViewerItem, setActiveStatusViewerItem] = useState(null);
+  const [isNewChatOpen, setIsNewChatOpen] = useState(false);
+  const [isNewGroupDrawerOpen, setIsNewGroupDrawerOpen] = useState(false);
+  const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
+  const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
+  const [profileSettingsTab, setProfileSettingsTab] = useState("settings");
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+
+  // Statuses state
+  const [statuses, setStatuses] = useState([]);
+
+  // Call states
   const [isCalling, setIsCalling] = useState(false);
   const [incomingCall, setIncomingCall] = useState(false);
   const [callData, setCallData] = useState(null);
-
-  const fetchRecentUsers = async (query = "") => {
-    try {
-      const res = await api.get(`/user/allusers?search=${query}`);
-      setRecentUser(res.data.data);
-    } catch (error) {
-      console.error("Failed to fetch users", error);
-    }
-  };
 
   const fetchMe = useCallback(async () => {
     try {
@@ -41,18 +55,70 @@ const Chat = () => {
       setUser(res.data.data);
       sessionStorage.setItem("AppUser", JSON.stringify(res.data.data));
     } catch (error) {
-      console.error("Failed to fetch me", error);
+      console.error("Failed to fetch user data", error);
     }
   }, [setUser]);
+
+  const fetchStatuses = useCallback(async () => {
+    try {
+      const res = await api.get("/status");
+      const { recentUpdates = [], viewedUpdates = [] } = res.data.data || {};
+      setStatuses([...recentUpdates, ...viewedUpdates]);
+    } catch (err) {
+      console.error("Failed to fetch status updates", err);
+    }
+  }, []);
+
+  const fetchAllUsers = useCallback(async () => {
+    try {
+      const res = await api.get("/user/allusers");
+      setAllUsers(res.data.data || []);
+    } catch (err) {
+      console.error("Failed to fetch all users", err);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isLogin) {
       navigate("/");
     } else {
       fetchMe();
+      fetchStatuses();
+      fetchAllUsers();
+      const currentTheme = getSavedTheme();
+      applyTheme(currentTheme, false);
     }
-  }, [isLogin, navigate, fetchMe]);
+  }, [isLogin, navigate, fetchMe, fetchStatuses, fetchAllUsers]);
 
+  // Keyboard shortcut listener (WhatsApp standard: Ctrl+Alt+, for Settings, Escape to close)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.altKey && (e.key === "," || e.code === "Comma")) {
+        e.preventDefault();
+        setActiveRailTab("settings");
+        setProfileSettingsTab("settings");
+        setIsProfileSettingsOpen((prev) => !prev);
+      } else if (e.key === "Escape") {
+        if (isProfileSettingsOpen) setIsProfileSettingsOpen(false);
+        if (isStatusDrawerOpen) setIsStatusDrawerOpen(false);
+        if (isNewChatOpen) setIsNewChatOpen(false);
+        if (isNewGroupDrawerOpen) setIsNewGroupDrawerOpen(false);
+        if (isGroupInfoOpen) setIsGroupInfoOpen(false);
+        if (isThemeModalOpen) setIsThemeModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    isProfileSettingsOpen,
+    isStatusDrawerOpen,
+    isNewChatOpen,
+    isNewGroupDrawerOpen,
+    isGroupInfoOpen,
+    isThemeModalOpen,
+  ]);
+
+  // Socket connection & room setup
   useEffect(() => {
     if (isLogin && user) {
       if (!socketAPI.connected) {
@@ -61,6 +127,48 @@ const Chat = () => {
       socketAPI.emit("createPath", user._id);
     }
   }, [isLogin, user]);
+
+  // Socket event listeners
+  useEffect(() => {
+    const handleOnlineUsers = (users) => setOnlineUsers(users);
+    const handleTyping = ({ from }) => {
+      if (from) setTypingUsers((prev) => ({ ...prev, [from]: true }));
+    };
+    const handleStopTyping = ({ from }) => {
+      if (from) {
+        setTypingUsers((prev) => {
+          const updated = { ...prev };
+          delete updated[from];
+          return updated;
+        });
+      }
+    };
+    const handleIncomingCall = (data) => {
+      setIncomingCall(true);
+      setCallData({
+        from: data.from,
+        name: data.name || "User",
+        isVideo: data.isVideo,
+      });
+    };
+    const handleNewStatus = () => {
+      fetchStatuses();
+    };
+
+    socketAPI.on("onlineUsers", handleOnlineUsers);
+    socketAPI.on("typing", handleTyping);
+    socketAPI.on("stop-typing", handleStopTyping);
+    socketAPI.on("incomingCall", handleIncomingCall);
+    socketAPI.on("newStatus", handleNewStatus);
+
+    return () => {
+      socketAPI.off("onlineUsers", handleOnlineUsers);
+      socketAPI.off("typing", handleTyping);
+      socketAPI.off("stop-typing", handleStopTyping);
+      socketAPI.off("incomingCall", handleIncomingCall);
+      socketAPI.off("newStatus", handleNewStatus);
+    };
+  }, [fetchStatuses]);
 
   const handleLogout = async () => {
     if (user) {
@@ -76,43 +184,9 @@ const Chat = () => {
     sessionStorage.removeItem("AppUser");
     setIsLogin(false);
     setIsLogoutModalOpen(false);
+    setIsProfileSettingsOpen(false);
     navigate("/");
   };
-
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (isLogin) fetchRecentUsers(searchQuery);
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery, isLogin]);
-
-  useEffect(() => {
-    // No click outside needed here anymore as we removed settings dropdown
-  }, []);
-
-  useEffect(() => {
-    const handleOnlineUsers = (users) => {
-      setOnlineUsers(users);
-    };
-    socketAPI.on("onlineUsers", handleOnlineUsers);
-    return () => {
-      socketAPI.off("onlineUsers", handleOnlineUsers);
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleIncomingCall = (data) => {
-      setIncomingCall(true);
-      setCallData({
-        from: data.from,
-        name: data.name || "User",
-        isVideo: data.isVideo,
-      });
-    };
-    socketAPI.on("incomingCall", handleIncomingCall);
-    return () => socketAPI.off("incomingCall", handleIncomingCall);
-  }, []);
 
   const initiateCall = (friend, isVideo) => {
     setIsCalling(true);
@@ -123,144 +197,217 @@ const Chat = () => {
     });
   };
 
+  const handleRailTabChange = (tabId) => {
+    setActiveRailTab(tabId);
+    if (tabId === "status") {
+      setIsStatusDrawerOpen(true);
+    } else if (tabId === "profile") {
+      setProfileSettingsTab("profile");
+      setIsProfileSettingsOpen(true);
+    } else if (tabId === "settings") {
+      setProfileSettingsTab("settings");
+      setIsProfileSettingsOpen(true);
+    }
+  };
+
   if (!isLogin) return null;
 
-  const displayUsers = recentUser;
-
   return (
-    <div className="flex h-dvh bg-base-100 overflow-hidden text-base-content">
-      {/* Sidebar */}
-      <div className={`${selectedFriend ? 'hidden md:flex' : 'flex'} w-full md:w-80 bg-base-200 flex-col h-full border-r border-base-content/10 shrink-0`}>
-        
-        {/* Search Bar (Top) */}
-        <div className="p-4 border-b border-base-content/10">
-          <div className="relative flex items-center bg-base-content/5 rounded-lg p-2 border border-base-content/10 focus-within:border-primary transition-colors">
-            <Search className="w-4 h-4 text-base-content/50 absolute left-3" />
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 bg-transparent border-none outline-none pl-8 text-sm text-base-content placeholder-base-content/50 w-full"
-            />
-          </div>
-        </div>
+    <div className="flex h-dvh w-screen bg-[#111b21] text-[#e9edef] overflow-hidden select-none font-sans">
+      {/* 1. WhatsApp Left Navigation Rail (60px) */}
+      <NavigationRail
+        activeTab={activeRailTab}
+        onTabChange={handleRailTabChange}
+        setActiveTab={handleRailTabChange}
+        hasUnviewedStatus={statuses.length > 0}
+        user={user}
+        onOpenSettings={() => {
+          setActiveRailTab("settings");
+          setProfileSettingsTab("settings");
+          setIsProfileSettingsOpen(true);
+        }}
+        onOpenProfile={() => {
+          setActiveRailTab("profile");
+          setProfileSettingsTab("profile");
+          setIsProfileSettingsOpen(true);
+        }}
+        onOpenThemeModal={() => setIsThemeModalOpen(true)}
+      />
 
-
-
-        {/* User List */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {displayUsers.map((u) => (
-            <div
-              key={u._id}
-              onClick={() => {
-                setSelectedFriend(u);
-                setRecentUser((prev) => prev.map((userItem) => userItem._id === u._id ? { ...userItem, unreadCount: 0 } : userItem));
-              }}
-              className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${
-                selectedFriend?._id === u._id ? "bg-base-content/10 shadow-sm" : "hover:bg-base-content/5"
-              }`}
-            >
-              <div className="relative shrink-0">
-                <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold overflow-hidden border-2 border-base-100">
-                  {u.profilePic ? (
-                    <img src={getMediaUrl(u.profilePic)} alt="Profile" className="w-full h-full object-cover" />
-                  ) : (
-                    u.fullName?.charAt(0).toUpperCase() || u.email?.charAt(0).toUpperCase()
-                  )}
-                </div>
-                {onlineUsers[u._id] && (
-                  <div className="absolute top-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-base-200"></div>
-                )}
-              </div>
-              <div className="flex-1 truncate">
-                <h4 className="text-base-content text-sm font-medium truncate">{u.fullName || u.email}</h4>
-              </div>
-              <div className="shrink-0 flex items-center">
-                {u.unreadCount > 0 && (
-                  <span className="w-5 h-5 rounded-full bg-primary text-primary-content text-[10px] flex items-center justify-center font-bold shadow-sm">
-                    {u.unreadCount > 99 ? '99+' : u.unreadCount}
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
-          {displayUsers.length === 0 && (
-            <div className="text-center text-sm text-base-content/50 mt-8">
-              No users found
-            </div>
-          )}
-        </div>
-
-        {/* Current User Header (Bottom) */}
-        <div className="p-4 flex items-center justify-between border-t border-base-content/10 bg-base-200/50 relative overflow-visible">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-lg shadow-sm overflow-hidden border-2 border-base-100">
-                {user?.profilePic ? (
-                  <img src={getMediaUrl(user.profilePic)} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  user?.fullName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()
-                )}
-              </div>
-              <div className="absolute top-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-base-200"></div>
-            </div>
-            <div>
-              <h3 className="font-semibold text-sm truncate max-w-25">{user?.fullName || user?.email}</h3>
-              <p className="text-xs text-base-content/70">Online</p>
-            </div>
-          </div>
-          <div className="flex gap-3 text-base-content/70 items-center">
-            <button 
-              onClick={() => setIsProfileModalOpen(true)} 
-              className="cursor-pointer hover:text-base-content transition-colors flex items-center h-full bg-transparent border-none p-0 outline-none"
-            >
-              <Edit3 size={18} />
-            </button>
-            <button onClick={() => setIsLogoutModalOpen(true)} className="cursor-pointer hover:text-error transition-colors bg-transparent border-none p-0 outline-none">
-              <LogOut size={18} />
-            </button>
-          </div>
-        </div>
+      {/* 2. Chat Sidebar (380-420px) */}
+      <div
+        className={`${
+          selectedFriend ? "hidden md:flex" : "flex"
+        } h-full shrink-0 border-r border-[#222e35]`}
+      >
+        <ChatSidebar
+          selectedChat={selectedFriend}
+          onSelectChat={(chat) => setSelectedFriend(chat)}
+          onlineUsers={onlineUsers}
+          typingUsers={typingUsers}
+          onOpenNewChat={() => setIsNewChatOpen(true)}
+          onOpenNewGroup={() => setIsNewGroupDrawerOpen(true)}
+          onOpenStatusViewer={(st) => setActiveStatusViewerItem(st)}
+          statuses={statuses}
+          onOpenSettings={() => {
+            setActiveRailTab("settings");
+            setProfileSettingsTab("settings");
+            setIsProfileSettingsOpen(true);
+          }}
+          onOpenThemeModal={() => setIsThemeModalOpen(true)}
+          onLogout={() => setIsLogoutModalOpen(true)}
+        />
       </div>
 
-      {/* Logout Modal */}
-      {isLogoutModalOpen && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-base-100 p-6 rounded-2xl shadow-xl w-full max-w-sm flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="font-semibold text-lg text-base-content mb-2">Confirm Logout</h3>
-            <p className="text-base-content/70 text-sm">Are you sure you want to logout?</p>
-            <div className="flex gap-3 mt-4">
-              <button onClick={() => setIsLogoutModalOpen(false)} className="btn btn-ghost flex-1 rounded-xl">Cancel</button>
-              <button onClick={handleLogout} className="btn btn-error flex-1 rounded-xl">Logout</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Profile Modal */}
-      <ProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
-
-      {/* Chat Area */}
-      <div className={`${!selectedFriend ? 'hidden md:flex' : 'flex'} flex-1 flex-col h-full bg-base-100`}>
+      {/* 3. Main Chat View / WhatsApp Empty State */}
+      <div
+        className={`${
+          !selectedFriend ? "hidden md:flex" : "flex"
+        } flex-1 flex-col h-full bg-[#0b141a] relative`}
+      >
         {selectedFriend ? (
           <Chatting
             selectedFriend={selectedFriend}
             setSelectedFriend={setSelectedFriend}
             onlineUsers={onlineUsers}
             initiateCall={initiateCall}
+            onOpenGroupInfo={() => setIsGroupInfoOpen(true)}
           />
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center text-base-content/50 gap-4">
-            <div className="w-20 h-20 bg-base-200 rounded-full flex items-center justify-center">
-              <Search className="w-8 h-8 opacity-50" />
+          /* WhatsApp Web Default Empty Screen */
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[#222e35]/20 select-none">
+            <div className="w-24 h-24 mb-6 rounded-full bg-[#202c33] flex items-center justify-center shadow-lg border border-[#2a3942]">
+              <MessageSquare className="w-12 h-12 text-[#00a884]" />
             </div>
-            <p>Select a chat to start messaging</p>
+            <h2 className="text-2xl font-light text-[#e9edef] mb-2 tracking-tight">
+              WhatsApp Web
+            </h2>
+            <p className="text-sm text-[#8696a0] max-w-md leading-relaxed font-normal">
+              Send and receive messages seamlessly. Connect with friends and groups with end-to-end encryption.
+            </p>
+            <div className="mt-auto flex items-center gap-1.5 text-xs text-[#8696a0] pt-8">
+              <Lock className="w-3.5 h-3.5" />
+              <span>End-to-end encrypted</span>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Call Modal */}
+      {/* 4. Slide-Over Drawers */}
+
+      {/* New Chat Contacts Drawer */}
+      <NewChatDrawer
+        isOpen={isNewChatOpen}
+        onClose={() => setIsNewChatOpen(false)}
+        allUsers={allUsers}
+        onSelectContact={(contact) => {
+          setSelectedFriend(contact);
+          setIsNewChatOpen(false);
+        }}
+        onOpenNewGroup={() => {
+          setIsNewChatOpen(false);
+          setIsNewGroupDrawerOpen(true);
+        }}
+      />
+
+      {/* Status Drawer */}
+      <StatusDrawer
+        isOpen={isStatusDrawerOpen}
+        onClose={() => {
+          setIsStatusDrawerOpen(false);
+          if (activeRailTab === "status") setActiveRailTab("chats");
+        }}
+        onOpenViewer={(st) => setActiveStatusViewerItem(st)}
+        onStatusCreated={() => fetchStatuses()}
+      />
+
+      {/* Status Story Viewer Modal */}
+      {activeStatusViewerItem && (
+        <StatusViewer
+          status={activeStatusViewerItem}
+          allStatuses={statuses}
+          onClose={() => setActiveStatusViewerItem(null)}
+          onReply={(st, text) => {
+            // Send direct reply message to user who posted status
+            if (st.user?._id) {
+              setSelectedFriend(st.user);
+              setActiveStatusViewerItem(null);
+            }
+          }}
+        />
+      )}
+
+      {/* New Group Drawer */}
+      <NewGroupDrawer
+        isOpen={isNewGroupDrawerOpen}
+        onClose={() => setIsNewGroupDrawerOpen(false)}
+        onGroupCreated={(newGroup) => {
+          setSelectedFriend(newGroup);
+          setIsNewGroupDrawerOpen(false);
+        }}
+        allUsers={allUsers}
+      />
+
+      {/* Group Info Drawer */}
+      {selectedFriend?.isGroupChat && (
+        <GroupInfoDrawer
+          isOpen={isGroupInfoOpen}
+          onClose={() => setIsGroupInfoOpen(false)}
+          groupChat={selectedFriend}
+          onUpdateGroup={(updatedGroup) => setSelectedFriend(updatedGroup)}
+          allUsers={allUsers}
+        />
+      )}
+
+      {/* Profile & Settings Drawer */}
+      <ProfileSettingsDrawer
+        isOpen={isProfileSettingsOpen}
+        onClose={() => {
+          setIsProfileSettingsOpen(false);
+          if (activeRailTab === "profile" || activeRailTab === "settings") {
+            setActiveRailTab("chats");
+          }
+        }}
+        initialTab={profileSettingsTab}
+        onLogout={() => setIsLogoutModalOpen(true)}
+        onOpenThemeModal={() => setIsThemeModalOpen(true)}
+      />
+
+      {/* WhatsApp Theme Selection Modal */}
+      <ThemeModal
+        isOpen={isThemeModalOpen}
+        onClose={() => setIsThemeModalOpen(false)}
+      />
+
+      {/* Logout Confirmation Modal */}
+      {isLogoutModalOpen && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 px-4">
+          <div className="bg-[#202c33] p-6 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col gap-3 border border-[#2a3942] animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="font-semibold text-lg text-[#e9edef] mb-1">
+              Log out?
+            </h3>
+            <p className="text-[#8696a0] text-sm leading-relaxed">
+              Are you sure you want to log out of WhatsApp Web?
+            </p>
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => setIsLogoutModalOpen(false)}
+                className="flex-1 py-2 rounded-xl text-sm font-medium hover:bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex-1 py-2 rounded-xl text-sm font-medium bg-red-600 hover:bg-red-500 text-white transition-colors cursor-pointer"
+              >
+                Log out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Audio & Video Call Modal */}
       <CallModal
         isCalling={isCalling}
         incomingCall={incomingCall}
@@ -272,7 +419,7 @@ const Chat = () => {
         }}
         onAcceptCall={() => {
           setIncomingCall(false);
-          setIsCalling(true); // transitions to active
+          setIsCalling(true);
         }}
         onRejectCall={() => {
           setIncomingCall(false);
