@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../features/auth/AuthContext";
 import api from "../lib/api";
 import { motion } from "motion/react";
-import { User, Mail, Phone, Calendar, Edit3, X, Save } from "lucide-react";
+import { User, Mail, Phone, Calendar, Edit3, X, Save, Palette, Check } from "lucide-react";
+import { applyTheme, THEME_LIST, getSavedTheme } from "../lib/theme";
 
 const UserDashboard = () => {
   const { user, isLogin, setUser } = useAuth();
@@ -16,6 +17,7 @@ const UserDashboard = () => {
     email: "",
     mobileNumber: "",
   });
+  const [currentTheme, setCurrentTheme] = useState(() => getSavedTheme());
 
   useEffect(() => {
     if (user) {
@@ -284,6 +286,55 @@ const UserDashboard = () => {
                 </div>
               </motion.form>
             )}
+          </div>
+        </div>
+
+        {/* Appearance & Themes Section */}
+        <div className="bg-base-100/90 backdrop-blur-xl border border-base-200/50 rounded-3xl p-6 sm:p-8 shadow-xl mt-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2.5 rounded-2xl bg-primary/10 text-primary">
+              <Palette className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-base-content">Appearance & Theme</h3>
+              <p className="text-xs text-base-content/60">Customize the look and feel across WhatsApp Web</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {THEME_LIST.map((th) => {
+              const isSelected = currentTheme === th.id;
+              return (
+                <div
+                  key={th.id}
+                  onClick={() => {
+                    setCurrentTheme(th.id);
+                    applyTheme(th.id, true);
+                  }}
+                  className={`p-3.5 rounded-2xl border-2 flex flex-col justify-between h-24 cursor-pointer transition-all duration-200 ${
+                    isSelected
+                      ? "border-primary bg-primary/10 shadow-lg scale-[1.02]"
+                      : "border-base-200 bg-base-200/30 hover:border-primary/40 hover:bg-base-200/60"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span
+                      className="w-4 h-4 rounded-full shadow-xs"
+                      style={{ backgroundColor: th.accent }}
+                    />
+                    {isSelected && (
+                      <div className="w-4 h-4 rounded-full bg-primary flex items-center justify-center text-primary-content">
+                        <Check className="w-3 h-3 stroke-[3]" />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-base-content truncate">{th.name}</p>
+                    <p className="text-[11px] text-base-content/60 truncate">{th.desc}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </motion.div>
