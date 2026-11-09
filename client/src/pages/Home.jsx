@@ -105,7 +105,7 @@ const Home = () => {
           >
             Start Chatting Now
           </motion.button>
-        </motion.div>
+        </motion.div> 
 
 
       </motion.div>

@@ -3,14 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
 import { useModal } from "../context/ModalContext";
 import { LogOut, LayoutDashboard, ChevronDown } from "lucide-react";
+import { applyTheme } from "../lib/theme";
 
 const SiteHeader = () => {
   const { user, isLogin, setUser, setIsLogin } = useAuth();
   const navigate = useNavigate();
   const { openLogin, openRegister } = useModal();
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") || "light";
-    document.documentElement.setAttribute("data-theme", savedTheme);
+    const savedTheme = localStorage.getItem("theme") || "dark";
+    applyTheme(savedTheme, false);
   }, []);
 
   const handleLogout = () => {
