@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import api from "../../lib/api";
 import { useAuth } from "../auth/AuthContext";
 import toast from "react-hot-toast";
+import { applyTheme } from "../../lib/theme";
 
 const ProfileModal = ({ isOpen, onClose }) => {
   const { user, setUser } = useAuth();
@@ -29,8 +30,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
   const handleThemeChange = (e) => {
     const theme = e.target.value;
     setSelectedTheme(theme);
-    localStorage.setItem("theme", theme);
-    document.documentElement.setAttribute("data-theme", theme);
+    applyTheme(theme, true);
   };
 
   const handleFileChange = (e) => {
