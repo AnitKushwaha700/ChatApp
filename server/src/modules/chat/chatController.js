@@ -56,6 +56,36 @@ export const fetchUserChats = async (req, res, next) => {
     const currentUserId = req.user._id;
     const { archived } = req.query;
 
+    // Auto-repair: fix any corrupted 1-on-1 chats created with only 1 user
+    try {
+      const corruptedChats = await Chat.find({
+        isGroupChat: false,
+        "users.1": { $exists: false },
+      });
+
+      for (const badChat of corruptedChats) {
+        const msgs = await Message.find({ chat: badChat._id });
+        for (const m of msgs) {
+          if (m.receiverId) {
+            const realChat = await Chat.findById(m.receiverId);
+            if (realChat && Array.isArray(realChat.users) && realChat.users.length >= 2) {
+              m.chat = realChat._id;
+              const realPartner = realChat.users.find(
+                (u) => u.toString() !== m.senderId.toString()
+              );
+              if (realPartner) m.receiverId = realPartner;
+              await m.save();
+              realChat.latestMessage = m._id;
+              await realChat.save();
+            }
+          }
+        }
+        await Chat.findByIdAndDelete(badChat._id);
+      }
+    } catch (cleanupErr) {
+      console.error("Cleanup corrupted chats error:", cleanupErr);
+    }
+
     const filter = {
       users: { $elemMatch: { $eq: currentUserId } },
     };
@@ -74,6 +104,9 @@ export const fetchUserChats = async (req, res, next) => {
         populate: { path: "senderId", select: "fullName profilePic email" },
       })
       .sort({ updatedAt: -1 });
+
+    // Filter out invalid 1-on-1 chats that do not have 2 valid users
+    chats = chats.filter((c) => c.isGroupChat || (Array.isArray(c.users) && c.users.length >= 2));
 
     // Also get unread counts per chat
     const unreadAggregate = await Message.aggregate([
@@ -99,7 +132,7 @@ export const fetchUserChats = async (req, res, next) => {
     const result = chats.map((chat) => {
       const chatObj = chat.toObject();
       const otherUser = chatObj.users.find(
-        (u) => u._id.toString() !== currentUserId.toString()
+        (u) => u._id && u._id.toString() !== currentUserId.toString()
       );
       if (!chatObj.isGroupChat && otherUser) {
         chatObj.unreadCount = unreadMap[otherUser._id.toString()] || 0;

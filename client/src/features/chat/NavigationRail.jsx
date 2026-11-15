@@ -2,6 +2,7 @@ import React from "react";
 import {
   MessageSquare,
   CircleDashed,
+  Phone,
   Users,
   Star,
   Settings,
@@ -44,6 +45,11 @@ const NavigationRail = ({
       label: "Status",
       icon: CircleDashed,
       dot: hasNewStatus || hasUnviewedStatus,
+    },
+    {
+      id: "calls",
+      label: "Calls",
+      icon: Phone,
     },
     {
       id: "groups",

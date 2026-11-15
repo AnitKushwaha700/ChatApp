@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
 import { useModal } from "../context/ModalContext";
@@ -9,6 +9,7 @@ const SiteHeader = () => {
   const { user, isLogin, setUser, setIsLogin } = useAuth();
   const navigate = useNavigate();
   const { openLogin, openRegister } = useModal();
+
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme") || "dark";
     applyTheme(savedTheme, false);
@@ -21,46 +22,59 @@ const SiteHeader = () => {
     navigate("/");
   };
 
-
-  const userInitial = user?.fullName ? user.fullName.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase();
+  const userInitial = user?.fullName
+    ? user.fullName.charAt(0).toUpperCase()
+    : user?.email?.charAt(0).toUpperCase();
 
   return (
-    <div className="h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-base-100/80 backdrop-blur-md sticky top-0 z-40 border-b border-base-200 shadow-sm flex items-center justify-between px-4 sm:px-6">
-      <h1
-        className="text-xl sm:text-3xl font-black text-transparent bg-clip-text bg-linear-to-r from-primary to-secondary cursor-pointer hover:opacity-80 transition-opacity"
+    <header className="h-16 bg-[#12151E] sticky top-0 z-50 border-b border-white/5 flex items-center justify-between px-6 sm:px-10 select-none">
+      {/* Brand: ChatApp (exact sampled color #4DC375) */}
+      <div
+        className="cursor-pointer select-none"
         onClick={() => navigate("/")}
       >
-        ChatApp
-      </h1>
+        <span className="text-2xl sm:text-3xl font-black text-[#4DC375] tracking-tight">
+          ChatApp
+        </span>
+      </div>
 
-      <div className="flex items-center gap-2 sm:gap-4">
+      {/* Auth Actions (exact colors: Login = White, Register = #04BC66) */}
+      <div className="flex items-center gap-3">
         {isLogin ? (
           <details className="dropdown dropdown-end">
-            <summary
-              className="flex items-center gap-2 hover:bg-base-200 p-1.5 pr-3 rounded-full transition-colors border border-base-200 cursor-pointer list-none [&::-webkit-details-marker]:hidden"
-            >
-              <div className="w-8 h-8 rounded-full bg-primary text-primary-content flex items-center justify-center shadow-sm">
-                <span className="font-semibold text-sm leading-none">{userInitial}</span>
+            <summary className="flex items-center gap-2 hover:bg-white/10 p-1.5 pr-3 rounded-full transition-colors border border-white/10 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+              <div className="w-8 h-8 rounded-full bg-[#04BC66] text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                {userInitial}
               </div>
-              <span className="text-sm font-medium hidden sm:block">
+              <span className="text-sm font-medium text-white hidden sm:block">
                 {user?.fullName?.split(" ")[0] || user?.email?.split("@")[0]}
               </span>
-              <ChevronDown className="w-4 h-4 text-base-content/60" />
+              <ChevronDown className="w-4 h-4 text-gray-400" />
             </summary>
-            <ul
-              className="dropdown-content absolute z-100 menu p-2 shadow-2xl bg-base-100 rounded-box w-52 mt-4 border border-base-200"
-            >
+            <ul className="dropdown-content absolute z-100 menu p-2 shadow-2xl bg-[#161b22] text-white rounded-2xl w-52 mt-3 border border-white/10">
               <li className="mb-1">
-                <a onClick={() => navigate("/dashboard")} className="flex items-center gap-2 hover:bg-base-200">
-                  <LayoutDashboard className="w-4 h-4 text-primary" />
+                <a
+                  onClick={() => navigate("/chat")}
+                  className="flex items-center gap-2 hover:bg-white/10 rounded-xl"
+                >
+                  <span className="font-medium">Open Chat</span>
+                </a>
+              </li>
+              <li className="mb-1">
+                <a
+                  onClick={() => navigate("/dashboard")}
+                  className="flex items-center gap-2 hover:bg-white/10 rounded-xl"
+                >
+                  <LayoutDashboard className="w-4 h-4 text-[#04BC66]" />
                   <span className="font-medium">Dashboard</span>
                 </a>
               </li>
-
-
-              <div className="divider my-0"></div>
-              <li className="mt-1">
-                <a onClick={handleLogout} className="flex items-center gap-2 hover:bg-error/10 hover:text-error transition-colors">
+              <div className="divider my-1 border-white/10"></div>
+              <li>
+                <a
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 hover:bg-red-500/10 text-red-400 rounded-xl transition-colors"
+                >
                   <LogOut className="w-4 h-4" />
                   <span className="font-medium">Logout</span>
                 </a>
@@ -68,23 +82,25 @@ const SiteHeader = () => {
             </ul>
           </details>
         ) : (
-          <div className="flex gap-2 sm:gap-3 shrink-0">
+          <div className="flex items-center gap-2.5">
             <button
-              className="btn btn-sm sm:btn-md btn-ghost hover:bg-primary/10 hover:text-primary font-medium px-3 sm:px-5 rounded-full"
+              type="button"
               onClick={openLogin}
+              className="bg-white hover:bg-gray-100 text-black font-semibold text-xs sm:text-sm px-4 sm:px-5 py-1.5 rounded-full transition-all cursor-pointer shadow-sm active:scale-95"
             >
               Login
             </button>
             <button
-              className="btn btn-sm sm:btn-md btn-primary shadow-sm px-3 sm:px-5 rounded-full"
+              type="button"
               onClick={openRegister}
+              className="bg-[#04BC66] hover:bg-[#03A85B] text-white font-semibold text-xs sm:text-sm px-4 sm:px-5 py-1.5 rounded-full transition-all cursor-pointer shadow-sm active:scale-95"
             >
               Register
             </button>
           </div>
         )}
       </div>
-    </div>
+    </header>
   );
 };
 

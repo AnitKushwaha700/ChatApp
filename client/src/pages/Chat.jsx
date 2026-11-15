@@ -11,6 +11,7 @@ import ChatSidebar from "../features/chat/ChatSidebar";
 import Chatting from "../features/chat/Chatting";
 import StatusDrawer from "../features/chat/StatusDrawer";
 import StatusViewer from "../features/chat/StatusViewer";
+import CallsDrawer from "../features/chat/CallsDrawer";
 import NewChatDrawer from "../features/chat/NewChatDrawer";
 import NewGroupDrawer from "../features/chat/NewGroupDrawer";
 import GroupInfoDrawer from "../features/chat/GroupInfoDrawer";
@@ -32,6 +33,7 @@ const Chat = () => {
   // Drawers and navigation tabs
   const [activeRailTab, setActiveRailTab] = useState("chats");
   const [isStatusDrawerOpen, setIsStatusDrawerOpen] = useState(false);
+  const [isCallsDrawerOpen, setIsCallsDrawerOpen] = useState(false);
   const [activeStatusViewerItem, setActiveStatusViewerItem] = useState(null);
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
   const [isNewGroupDrawerOpen, setIsNewGroupDrawerOpen] = useState(false);
@@ -198,15 +200,28 @@ const Chat = () => {
   };
 
   const handleRailTabChange = (tabId) => {
+    if (tabId === activeRailTab && (tabId === "status" || tabId === "calls")) {
+      setActiveRailTab("chats");
+      setIsStatusDrawerOpen(false);
+      setIsCallsDrawerOpen(false);
+      return;
+    }
     setActiveRailTab(tabId);
     if (tabId === "status") {
       setIsStatusDrawerOpen(true);
+      setIsCallsDrawerOpen(false);
+    } else if (tabId === "calls") {
+      setIsCallsDrawerOpen(true);
+      setIsStatusDrawerOpen(false);
     } else if (tabId === "profile") {
       setProfileSettingsTab("profile");
       setIsProfileSettingsOpen(true);
     } else if (tabId === "settings") {
       setProfileSettingsTab("settings");
       setIsProfileSettingsOpen(true);
+    } else {
+      setIsStatusDrawerOpen(false);
+      setIsCallsDrawerOpen(false);
     }
   };
 
@@ -319,6 +334,20 @@ const Chat = () => {
         }}
         onOpenViewer={(st) => setActiveStatusViewerItem(st)}
         onStatusCreated={() => fetchStatuses()}
+      />
+
+      {/* Calls Drawer */}
+      <CallsDrawer
+        isOpen={isCallsDrawerOpen}
+        onClose={() => {
+          setIsCallsDrawerOpen(false);
+          if (activeRailTab === "calls") setActiveRailTab("chats");
+        }}
+        currentUser={user}
+        allUsers={allUsers}
+        onStartCall={(contact, isVideo) => {
+          initiateCall(contact, isVideo);
+        }}
       />
 
       {/* Status Story Viewer Modal */}

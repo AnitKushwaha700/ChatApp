@@ -7,16 +7,48 @@ import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig({
   server: {
     headers: {
-      "Cross-Origin-Opener-Policy": "unsafe-none",
+      "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
     },
     proxy: {
-      "/auth": {
+      "^/auth(/|$)": {
         target: "http://127.0.0.1:4500",
         changeOrigin: true,
+        bypass(req) {
+          if (req.headers.accept?.includes("text/html")) return "/index.html";
+        },
       },
-      "/user": {
+      "^/user(/|$)": {
         target: "http://127.0.0.1:4500",
         changeOrigin: true,
+        bypass(req) {
+          if (req.headers.accept?.includes("text/html")) return "/index.html";
+        },
+      },
+      "^/chat(/|$)": {
+        target: "http://127.0.0.1:4500",
+        changeOrigin: true,
+        bypass(req) {
+          if (req.headers.accept?.includes("text/html")) return "/index.html";
+        },
+      },
+      "^/status(/|$)": {
+        target: "http://127.0.0.1:4500",
+        changeOrigin: true,
+        bypass(req) {
+          if (req.headers.accept?.includes("text/html")) return "/index.html";
+        },
+      },
+      "^/call(/|$)": {
+        target: "http://127.0.0.1:4500",
+        changeOrigin: true,
+        bypass(req) {
+          if (req.headers.accept?.includes("text/html")) return "/index.html";
+        },
+      },
+      "^/socket.io(/|$)": {
+        target: "http://127.0.0.1:4500",
+        changeOrigin: true,
+        ws: true,
       },
     },
   },

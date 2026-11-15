@@ -106,6 +106,17 @@ const getMediaUrl = (url) => {
   return url.startsWith("http") ? url : `${api.defaults.baseURL}${url}`;
 };
 
+const appendUniqueMessage = (prevList, msgToAdd) => {
+  if (!msgToAdd) return prevList;
+  const addId = (msgToAdd._id || msgToAdd.id)?.toString();
+  if (!addId) return [...prevList, msgToAdd];
+  const exists = prevList.some(
+    (m) => (m._id || m.id)?.toString() === addId
+  );
+  if (exists) return prevList;
+  return [...prevList, msgToAdd];
+};
+
 const Chatting = ({
   selectedFriend,
   setSelectedFriend,
@@ -135,6 +146,43 @@ const Chatting = ({
   const [currentSearchIndex, setCurrentSearchIndex] = useState(0);
   const [highlightedMessageId, setHighlightedMessageId] = useState(null);
 
+  // Normalize whether selectedFriend is a Chat object (from sidebar) or User object (from new chat / contacts)
+  const isGroup = Boolean(selectedFriend?.isGroupChat);
+  const otherUser = React.useMemo(() => {
+    if (!selectedFriend) return null;
+    if (isGroup) return null;
+    if (Array.isArray(selectedFriend.users)) {
+      return (
+        selectedFriend.users.find(
+          (u) => (u._id || u).toString() !== user?._id?.toString()
+        ) || null
+      );
+    }
+    return selectedFriend;
+  }, [selectedFriend, isGroup, user?._id]);
+
+  const targetChatId = isGroup
+    ? selectedFriend?._id
+    : Array.isArray(selectedFriend?.users)
+    ? selectedFriend?._id
+    : null;
+
+  const targetReceiverId = isGroup
+    ? null
+    : otherUser?._id || (typeof otherUser === "string" ? otherUser : null) || (selectedFriend?.users ? null : selectedFriend?._id);
+
+  const displayName = isGroup
+    ? selectedFriend?.chatName || "Group"
+    : otherUser?.fullName || otherUser?.email || "User";
+
+  const displayAvatar = isGroup
+    ? selectedFriend?.groupIcon
+    : otherUser?.profilePic;
+
+  const isOtherOnline = Boolean(
+    targetReceiverId && onlineUsers[targetReceiverId.toString()]
+  );
+
   const handleToggleStar = async (msgId) => {
     try {
       const res = await api.put(`/chat/star/${msgId}`);
@@ -157,21 +205,27 @@ const Chatting = ({
   const typingTimeoutRef = useRef(null);
 
   const fetchChatData = async () => {
+    if (!selectedFriend?._id) return;
     try {
       const res = await api.get(`/user/get-messages/${selectedFriend._id}`);
       setFilteredChatData(res.data.data);
 
       // Mark messages as read on server and inform sender via socket
-      await api.put(`/user/mark-read/${selectedFriend._id}`);
-      socketAPI.emit("mark-read", { from: selectedFriend._id });
+      const readTarget = targetChatId || targetReceiverId || selectedFriend._id;
+      await api.put(`/user/mark-read/${readTarget}`);
+      if (targetReceiverId) {
+        socketAPI.emit("mark-read", { from: targetReceiverId });
+      }
     } catch (error) {
       console.error("Failed to fetch chat data", error);
     }
   };
 
   const handleClearChat = async () => {
+    if (!selectedFriend?._id) return;
     try {
-      await api.delete(`/user/messages/${selectedFriend._id}`);
+      const clearTarget = targetChatId || targetReceiverId || selectedFriend._id;
+      await api.delete(`/user/messages/${clearTarget}`);
       setFilteredChatData([]);
       setIsHeaderMenuOpen(false);
       setIsClearChatModalOpen(false);
@@ -209,16 +263,17 @@ const Chatting = ({
     const val = e.target.value;
     setMessage(val);
 
-    if (editingMessage || !selectedFriend?._id) return;
+    if (editingMessage || (!targetReceiverId && !targetChatId)) return;
+    const typingTarget = targetReceiverId || targetChatId;
 
     if (val.trim()) {
-      socketAPI.emit("typing", { to: selectedFriend._id });
+      socketAPI.emit("typing", { to: typingTarget });
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
-        socketAPI.emit("stop-typing", { to: selectedFriend._id });
+        socketAPI.emit("stop-typing", { to: typingTarget });
       }, 1800);
     } else {
-      socketAPI.emit("stop-typing", { to: selectedFriend._id });
+      socketAPI.emit("stop-typing", { to: typingTarget });
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     }
   };
@@ -297,8 +352,9 @@ const Chatting = ({
     }
     if (type === "text" && !message.trim()) return;
 
-    if (selectedFriend?._id) {
-      socketAPI.emit("stop-typing", { to: selectedFriend._id });
+    const typingTarget = targetReceiverId || targetChatId;
+    if (typingTarget) {
+      socketAPI.emit("stop-typing", { to: typingTarget });
     }
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
 
@@ -311,21 +367,16 @@ const Chatting = ({
           messageType: "text",
           repliedTo: repliedToId,
         };
-        if (selectedFriend.isGroupChat) {
-          payload.chatId = selectedFriend._id;
-        } else {
-          payload.receiverID = selectedFriend._id;
-        }
+        if (targetChatId) payload.chatId = targetChatId;
+        if (targetReceiverId) payload.receiverID = targetReceiverId;
+
         const res = await api.post("/user/send-message", payload);
-        setFilteredChatData((prev) => [...prev, res.data.data]);
+        setFilteredChatData((prev) => appendUniqueMessage(prev, res.data.data));
         setMessage("");
       } else if (file) {
         const formData = new FormData();
-        if (selectedFriend.isGroupChat) {
-          formData.append("chatId", selectedFriend._id);
-        } else {
-          formData.append("receiverID", selectedFriend._id);
-        }
+        if (targetChatId) formData.append("chatId", targetChatId);
+        if (targetReceiverId) formData.append("receiverID", targetReceiverId);
         formData.append("messageType", type);
         formData.append("media", file);
         if (repliedToId) {
@@ -335,7 +386,7 @@ const Chatting = ({
         const res = await api.post("/user/send-message", formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
-        setFilteredChatData((prev) => [...prev, res.data.data]);
+        setFilteredChatData((prev) => appendUniqueMessage(prev, res.data.data));
       }
       playMessageSound("outgoing");
 
@@ -427,24 +478,30 @@ const Chatting = ({
 
   useEffect(() => {
     const handleNewMessage = (newMessage) => {
+      const msgChatId = (newMessage.chat?._id || newMessage.chat)?.toString();
+      const msgSenderId = (newMessage.senderId?._id || newMessage.senderId)?.toString();
+      const msgReceiverId = (newMessage.receiverId?._id || newMessage.receiverId)?.toString();
+      const currentUserId = (user?._id || user?.id)?.toString();
+
       const isRelevant =
-        newMessage.chat === selectedFriend?._id ||
-        newMessage.chat?._id === selectedFriend?._id ||
-        newMessage.senderId === selectedFriend?._id ||
-        newMessage.receiverId === selectedFriend?._id;
+        (targetChatId && msgChatId === targetChatId.toString()) ||
+        (targetReceiverId &&
+          (msgSenderId === targetReceiverId.toString() || msgReceiverId === targetReceiverId.toString())) ||
+        (selectedFriend?._id &&
+          (msgChatId === selectedFriend._id.toString() ||
+            msgSenderId === selectedFriend._id.toString() ||
+            msgReceiverId === selectedFriend._id.toString()));
 
       if (isRelevant) {
-        setFilteredChatData((prev) => {
-          if (prev.find((msg) => msg._id === newMessage._id)) return prev;
-          if (newMessage.senderId !== user._id) {
-            playMessageSound("incoming");
-          }
-          return [...prev, newMessage];
-        });
+        setFilteredChatData((prev) => appendUniqueMessage(prev, newMessage));
 
-        if (newMessage.senderId !== user._id) {
-          api.put(`/user/mark-read/${selectedFriend._id}`).catch(console.error);
-          socketAPI.emit("mark-read", { from: selectedFriend._id });
+        if (msgSenderId && currentUserId && msgSenderId !== currentUserId) {
+          playMessageSound("incoming");
+          const markTarget = targetChatId || targetReceiverId || selectedFriend._id;
+          api.put(`/user/mark-read/${markTarget}`).catch(console.error);
+          if (targetReceiverId) {
+            socketAPI.emit("mark-read", { from: targetReceiverId });
+          }
         }
       }
     };
@@ -466,22 +523,36 @@ const Chatting = ({
     };
 
     const handleTyping = ({ from }) => {
-      if (from === selectedFriend?._id) {
+      if (
+        from === targetReceiverId ||
+        from === targetChatId ||
+        from === selectedFriend?._id
+      ) {
         setIsFriendTyping(true);
       }
     };
 
     const handleStopTyping = ({ from }) => {
-      if (from === selectedFriend?._id) {
+      if (
+        from === targetReceiverId ||
+        from === targetChatId ||
+        from === selectedFriend?._id
+      ) {
         setIsFriendTyping(false);
       }
     };
 
     const handleMessagesRead = ({ friendId }) => {
-      if (friendId === selectedFriend?._id) {
+      if (
+        friendId === targetReceiverId ||
+        friendId === targetChatId ||
+        friendId === selectedFriend?._id
+      ) {
         setFilteredChatData((prev) =>
           prev.map((msg) =>
-            msg.senderId === user._id ? { ...msg, isRead: true } : msg
+            msg.senderId === user._id || msg.senderId?._id === user._id
+              ? { ...msg, isRead: true }
+              : msg
           )
         );
       }
@@ -687,49 +758,46 @@ const Chatting = ({
           </button>
           <div className="relative shrink-0">
             <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-base overflow-hidden border border-base-content/10">
-              {selectedFriend?.isGroupChat ? (
+              {isGroup ? (
                 selectedFriend.groupIcon ? (
                   <img
                     src={getMediaUrl(selectedFriend.groupIcon)}
-                    alt={selectedFriend.chatName}
+                    alt={displayName}
                     className="w-full h-full object-cover"
                   />
                 ) : (
                   <Users className="w-5 h-5 text-primary" />
                 )
-              ) : selectedFriend?.profilePic ? (
+              ) : displayAvatar ? (
                 <img
-                  src={getMediaUrl(selectedFriend.profilePic)}
-                  alt="Profile"
+                  src={getMediaUrl(displayAvatar)}
+                  alt={displayName}
                   className="w-full h-full object-cover"
                 />
               ) : (
-                selectedFriend?.fullName?.charAt(0).toUpperCase() ||
-                selectedFriend?.email?.charAt(0).toUpperCase()
+                (displayName || "U").charAt(0).toUpperCase()
               )}
             </div>
-            {!selectedFriend?.isGroupChat && onlineUsers[selectedFriend?._id] && (
+            {!isGroup && isOtherOnline && (
               <div className="absolute top-0 right-0 w-3 h-3 bg-success rounded-full border-2 border-base-200"></div>
             )}
           </div>
           <div className="min-w-0">
             <h3 className="font-semibold text-sm truncate text-base-content">
-              {selectedFriend?.isGroupChat
-                ? selectedFriend.chatName
-                : selectedFriend?.fullName || selectedFriend?.email}
+              {displayName}
             </h3>
             {isFriendTyping ? (
               <p className="text-xs text-primary font-semibold flex items-center gap-1.5 animate-pulse">
                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-ping"></span>
                 <span>typing...</span>
               </p>
-            ) : selectedFriend?.isGroupChat ? (
+            ) : isGroup ? (
               <p className="text-xs text-base-content/70 truncate">
                 {selectedFriend.users?.length || 0} participants
               </p>
             ) : (
               <p className="text-xs text-base-content/70">
-                {onlineUsers[selectedFriend?._id] ? "Online" : "Offline"}
+                {isOtherOnline ? "Online" : "Offline"}
               </p>
             )}
           </div>
@@ -750,16 +818,16 @@ const Chatting = ({
           >
             <Search size={20} />
           </button>
-          {!selectedFriend?.isGroupChat && initiateCall && (
+          {!isGroup && initiateCall && (
             <>
               <button
-                onClick={() => initiateCall(selectedFriend, true)}
+                onClick={() => initiateCall(otherUser || selectedFriend, true)}
                 className="text-primary hover:opacity-80 transition-opacity p-1 bg-transparent border-none outline-none cursor-pointer"
               >
                 <Video size={24} />
               </button>
               <button
-                onClick={() => initiateCall(selectedFriend, false)}
+                onClick={() => initiateCall(otherUser || selectedFriend, false)}
                 className="text-primary hover:opacity-80 transition-opacity p-1 bg-transparent border-none outline-none cursor-pointer"
               >
                 <Phone size={22} />
@@ -966,7 +1034,10 @@ const Chatting = ({
             {(() => {
               let lastDate = null;
               return filteredChatData.map((chat) => {
-                const isMe = chat.senderId === user._id;
+                const senderIdStr = (chat.senderId?._id || chat.senderId)?.toString();
+                const currentUserIdStr = (user?._id || user?.id)?.toString();
+                const isMe = Boolean(senderIdStr && currentUserIdStr && senderIdStr === currentUserIdStr);
+
                 const emojiOnly =
                   chat.messageType === "text" && isEmojiOnly(chat.message);
                 const isMediaOnly =
@@ -992,47 +1063,97 @@ const Chatting = ({
                 return (
                   <React.Fragment key={chat._id}>
                     {isNewDate && (
-                      <div className="w-full flex justify-center my-4">
-                        <span className="bg-base-200/80 backdrop-blur-sm px-3 py-1 rounded-full text-xs text-base-content/70 shadow-sm border border-base-content/10 font-medium">
+                      <div className="w-full flex justify-center my-3 select-none">
+                        <span className="bg-[#182229] px-3 py-1 rounded-lg text-xs text-[#8696a0] shadow-sm border border-[#222e35]/50 font-normal">
                           {dateLabel}
                         </span>
                       </div>
                     )}
                     <div
                       id={`msg-${chat._id}`}
-                      className={`chat ${isMe ? "chat-sender" : "chat-receiver"} group relative transition-all duration-300 ${
+                      className={`w-full flex ${isMe ? "justify-end" : "justify-start"} px-2 sm:px-4 my-0.5 group relative transition-all duration-200 ${
                         highlightedMessageId === chat._id
-                          ? "ring-2 ring-primary ring-offset-2 rounded-2xl bg-primary/10 p-1"
+                          ? "ring-2 ring-[#00a884] ring-offset-2 rounded-2xl bg-[#00a884]/15 p-1"
                           : ""
                       }`}
                     >
-                      <div className="chat-avatar avatar">
-                        <div className="w-10 h-10 rounded-full border border-base-content/10 overflow-hidden">
-                          <img
-                            src={
-                              isMe
-                                ? user?.profilePic
-                                  ? getMediaUrl(user.profilePic)
-                                  : `https://ui-avatars.com/api/?name=${user?.fullName}`
-                                : selectedFriend?.isGroupChat
-                                  ? chat.senderId?.profilePic
-                                    ? getMediaUrl(chat.senderId.profilePic)
-                                    : `https://ui-avatars.com/api/?name=${chat.senderId?.fullName || "User"}`
-                                  : selectedFriend?.profilePic
-                                    ? getMediaUrl(selectedFriend.profilePic)
-                                    : `https://ui-avatars.com/api/?name=${selectedFriend?.fullName}`
-                            }
-                            alt="avatar"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
+                      {/* Micro Hover Action Bar */}
+                      <div
+                        className={`absolute -top-3.5 z-30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-[#202c33] border border-[#2a3942] rounded-full px-1.5 py-0.5 shadow-lg ${
+                          isMe ? "right-4 sm:right-8" : "left-4 sm:left-8"
+                        }`}
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleStar(chat._id);
+                          }}
+                          className="p-1 rounded-full hover:bg-[#374248] text-[#aebac1] hover:text-amber-400 transition-colors cursor-pointer border-none bg-transparent"
+                          title={chat.isStarred ? "Unstar" : "Star"}
+                        >
+                          <Star size={13} className={chat.isStarred ? "text-amber-400 fill-amber-400" : ""} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveReactionMenuMsgId(
+                              activeReactionMenuMsgId === chat._id ? null : chat._id,
+                            );
+                          }}
+                          className="p-1 rounded-full hover:bg-[#374248] text-[#aebac1] hover:text-[#e9edef] transition-colors cursor-pointer border-none bg-transparent"
+                          title="React"
+                        >
+                          <Smile size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setReplyingTo(chat);
+                            setEditingMessage(null);
+                          }}
+                          className="p-1 rounded-full hover:bg-[#374248] text-[#aebac1] hover:text-[#e9edef] transition-colors cursor-pointer border-none bg-transparent"
+                          title="Reply"
+                        >
+                          <Reply size={13} />
+                        </button>
+                        {isMe &&
+                          chat.messageType === "text" &&
+                          !chat.isDeletedForEveryone && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingMessage(chat);
+                                setMessage(chat.message);
+                                setReplyingTo(null);
+                              }}
+                              className="p-1 rounded-full hover:bg-[#374248] text-[#aebac1] hover:text-[#e9edef] transition-colors cursor-pointer border-none bg-transparent"
+                              title="Edit"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                          )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowDeleteModal(chat._id);
+                          }}
+                          className="p-1 rounded-full hover:bg-[#374248] text-[#aebac1] hover:text-rose-400 transition-colors cursor-pointer border-none bg-transparent"
+                          title="Delete"
+                        >
+                          <MoreVertical size={13} />
+                        </button>
                       </div>
 
                       {/* Quick Reaction Floating Bar */}
                       {activeReactionMenuMsgId === chat._id && (
                         <div
-                          className={`reaction-menu-container absolute -top-11 z-40 bg-base-100 border border-base-content/10 shadow-2xl rounded-full px-2 py-1 flex items-center gap-1 animate-in fade-in zoom-in-95 ${
-                            isMe ? "right-10" : "left-10"
+                          className={`reaction-menu-container absolute -top-11 z-40 bg-[#202c33] border border-[#2a3942] shadow-2xl rounded-full px-2 py-1 flex items-center gap-1.5 animate-in fade-in zoom-in-95 ${
+                            isMe ? "right-4 sm:right-8" : "left-4 sm:left-8"
                           }`}
                         >
                           {QUICK_REACTIONS.map((emoji) => (
@@ -1051,85 +1172,20 @@ const Chatting = ({
                         </div>
                       )}
 
-                      {/* Micro Hover Action Bar */}
-                      <div
-                        className={`absolute -top-3 z-30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 bg-base-100 border border-base-content/10 rounded-full px-1 py-0.5 shadow-md ${
-                          isMe ? "right-12" : "left-12"
-                        }`}
-                      >
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleStar(chat._id);
-                          }}
-                          className="p-1 rounded-full hover:bg-base-200 text-base-content/70 hover:text-amber-400 transition-colors cursor-pointer border-none bg-transparent"
-                          title={chat.isStarred ? "Unstar" : "Star"}
-                        >
-                          <Star size={13} className={chat.isStarred ? "text-amber-400 fill-amber-400" : ""} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveReactionMenuMsgId(
-                              activeReactionMenuMsgId === chat._id ? null : chat._id,
-                            );
-                          }}
-                          className="p-1 rounded-full hover:bg-base-200 text-base-content/70 hover:text-base-content transition-colors cursor-pointer border-none bg-transparent"
-                          title="React"
-                        >
-                          <Smile size={13} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setReplyingTo(chat);
-                            setEditingMessage(null);
-                          }}
-                          className="p-1 rounded-full hover:bg-base-200 text-base-content/70 hover:text-base-content transition-colors cursor-pointer border-none bg-transparent"
-                          title="Reply"
-                        >
-                          <Reply size={13} />
-                        </button>
-                        {isMe &&
-                          chat.messageType === "text" &&
-                          !chat.isDeletedForEveryone && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingMessage(chat);
-                                setMessage(chat.message);
-                                setReplyingTo(null);
-                              }}
-                              className="p-1 rounded-full hover:bg-base-200 text-base-content/70 hover:text-base-content transition-colors cursor-pointer border-none bg-transparent"
-                              title="Edit"
-                            >
-                              <Edit2 size={13} />
-                            </button>
-                          )}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowDeleteModal(chat._id);
-                          }}
-                          className="p-1 rounded-full hover:bg-base-200 text-base-content/70 hover:text-error transition-colors cursor-pointer border-none bg-transparent"
-                          title="Delete"
-                        >
-                          <MoreVertical size={13} />
-                        </button>
-                      </div>
-
+                      {/* Authentic WhatsApp Message Bubble */}
                       <div
                         onDoubleClick={() => setShowDeleteModal(chat._id)}
-                        className={`chat-bubble relative cursor-pointer shadow-sm ${isMediaOnly ? "p-1.5!" : ""} ${isMe ? "chat-bubble-me" : "chat-bubble-friend"} ${emojiOnly ? "bg-transparent! shadow-none! text-5xl p-0" : ""}`}
+                        className={`relative max-w-[85%] sm:max-w-[65%] rounded-lg px-2.5 py-1.5 shadow-xs text-sm select-text transition-all ${
+                          isMediaOnly ? "p-1!" : ""
+                        } ${
+                          isMe
+                            ? "bg-[#005c4b] text-[#e9edef] rounded-tr-none"
+                            : "bg-[#202c33] text-[#e9edef] rounded-tl-none"
+                        } ${emojiOnly ? "bg-transparent! shadow-none! text-5xl p-0!" : ""}`}
                       >
                         {/* Group Sender Name */}
-                        {selectedFriend?.isGroupChat && !isMe && (
-                          <p className="text-[11px] font-semibold text-[#00a884] mb-1 select-none">
+                        {isGroup && !isMe && (
+                          <p className="text-[12px] font-semibold text-[#00a884] mb-0.5 select-none">
                             {chat.senderId?.fullName || chat.senderId?.email || "Member"}
                           </p>
                         )}
@@ -1141,12 +1197,16 @@ const Chatting = ({
                               e.stopPropagation();
                               scrollToMessage(chat.repliedTo._id || chat.repliedTo);
                             }}
-                            className="mb-1.5 p-1.5 px-2.5 rounded-lg bg-black/10 dark:bg-white/10 border-l-4 border-primary text-xs cursor-pointer hover:opacity-85 transition-opacity select-none"
+                            className={`mb-1.5 p-1.5 px-2.5 rounded-md border-l-4 text-xs cursor-pointer hover:opacity-90 transition-opacity select-none ${
+                              isMe
+                                ? "bg-black/20 border-white/60 text-white/90"
+                                : "bg-black/30 border-[#00a884] text-[#e9edef]"
+                            }`}
                           >
-                            <p className="font-semibold text-[11px] text-primary truncate">
-                              {chat.repliedTo.senderId === user._id
+                            <p className={`font-semibold text-[11px] truncate ${isMe ? "text-white" : "text-[#00a884]"}`}>
+                              {(chat.repliedTo.senderId?._id || chat.repliedTo.senderId)?.toString() === currentUserIdStr
                                 ? "You"
-                                : selectedFriend?.fullName || "Friend"}
+                                : displayName || "Friend"}
                             </p>
                             <p className="text-[11px] opacity-80 truncate max-w-xs">
                               {chat.repliedTo.messageType === "image"
@@ -1163,14 +1223,22 @@ const Chatting = ({
                         )}
 
                         <div
-                          className={`flex flex-wrap items-end gap-x-3 gap-y-1 ${emojiOnly ? "flex-col" : ""}`}
+                          className={`flex flex-wrap items-end gap-x-2 gap-y-0.5 ${emojiOnly ? "flex-col" : ""}`}
                         >
-                          <div className={emojiOnly ? "mb-2" : "wrap-break-word"}>
+                          <div className={emojiOnly ? "mb-1" : "break-words leading-relaxed text-[14.2px]"}>
                             {renderMessageContent(chat, emojiOnly)}
                           </div>
 
                           <div
-                            className={`flex items-center gap-1 text-[10px] select-none whitespace-nowrap ml-auto ${isMediaOnly ? "absolute bottom-2.5 right-2.5 bg-black/50 text-white rounded-full px-2 py-0.5 backdrop-blur-sm" : emojiOnly ? "absolute -bottom-3 right-0 bg-base-100/80 backdrop-blur-md rounded-full px-1.5 py-0.5 shadow-sm text-base-content/80" : "opacity-70"}`}
+                            className={`flex items-center gap-1 text-[11px] select-none whitespace-nowrap ml-auto pt-1 pl-1.5 ${
+                              isMediaOnly
+                                ? "absolute bottom-2 right-2 bg-black/60 text-white rounded-full px-2 py-0.5 backdrop-blur-sm"
+                                : emojiOnly
+                                  ? "absolute -bottom-3 right-0 bg-[#202c33] rounded-full px-1.5 py-0.5 shadow-sm text-[#8696a0]"
+                                  : isMe
+                                    ? "text-white/65"
+                                    : "text-[#8696a0]"
+                            }`}
                           >
                             {chat.isStarred && (
                               <Star size={11} className="text-amber-400 fill-amber-400 mr-0.5" />
@@ -1184,39 +1252,27 @@ const Chatting = ({
                               {chat.createdAt
                                 ? new Date(chat.createdAt).toLocaleTimeString(
                                     [],
-                                    { hour: "2-digit", minute: "2-digit" },
+                                    { hour: "numeric", minute: "2-digit" },
                                   )
                                 : chat.timestamp}
                             </time>
                             {isMe &&
                               (chat.isRead ? (
                                 <CheckCheck
-                                  size={14}
-                                  className="text-sky-500 font-bold"
+                                  size={15}
+                                  className="text-[#53bdeb] font-bold"
                                   title="Read"
                                 />
-                              ) : onlineUsers[selectedFriend?._id] ? (
+                              ) : isOtherOnline ? (
                                 <CheckCheck
-                                  size={14}
-                                  className={
-                                    isMediaOnly
-                                      ? "text-white/80"
-                                      : emojiOnly
-                                        ? "text-primary/70"
-                                        : "text-black/50"
-                                  }
+                                  size={15}
+                                  className="text-white/70"
                                   title="Delivered"
                                 />
                               ) : (
                                 <Check
-                                  size={14}
-                                  className={
-                                    isMediaOnly
-                                      ? "text-white/80"
-                                      : emojiOnly
-                                        ? "text-primary/70"
-                                        : "text-black/50"
-                                  }
+                                  size={15}
+                                  className="text-white/70"
                                   title="Sent"
                                 />
                               ))}
@@ -1241,8 +1297,8 @@ const Chatting = ({
                                   }}
                                   className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border shadow-2xs transition-all active:scale-95 cursor-pointer ${
                                     hasUserReacted
-                                      ? "bg-primary/20 border-primary text-primary font-bold"
-                                      : "bg-base-100/90 border-base-content/10 text-base-content/80 hover:bg-base-200"
+                                      ? "bg-[#00a884]/20 border-[#00a884] text-[#00a884] font-bold"
+                                      : "bg-[#202c33]/90 border-[#2a3942] text-[#e9edef] hover:bg-[#2a3942]"
                                   }`}
                                   title={hasUserReacted ? "Remove reaction" : "React"}
                                 >
@@ -1255,43 +1311,46 @@ const Chatting = ({
                             )}
                           </div>
                         )}
-                      </div>
-
-                      {showDeleteModal === chat._id && (
-                        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 px-4">
-                          <div className="delete-modal bg-base-100 p-6 rounded-2xl shadow-xl w-full max-w-sm flex flex-col gap-3 animate-in fade-in zoom-in-95 duration-200">
-                            <h3 className="font-semibold text-lg text-base-content mb-2">
-                              Delete message?
-                            </h3>
-                            {isMe && (
+                        {/* Delete Modal for this message */}
+                        {showDeleteModal === chat._id && (
+                          <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 px-4">
+                            <div className="delete-modal bg-[#202c33] p-6 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col gap-3 border border-[#2a3942] animate-in fade-in zoom-in-95 duration-200">
+                              <h3 className="font-semibold text-lg text-[#e9edef] mb-2">
+                                Delete message?
+                              </h3>
+                              {isMe && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    handleDeleteMessage(chat._id, "for_everyone");
+                                    setShowDeleteModal(null);
+                                  }}
+                                  className="py-2.5 px-4 rounded-xl text-sm font-medium border border-rose-500/40 text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                                >
+                                  Delete for everyone
+                                </button>
+                              )}
                               <button
+                                type="button"
                                 onClick={() => {
-                                  handleDeleteMessage(chat._id, "for_everyone");
+                                  handleDeleteMessage(chat._id, "for_me");
                                   setShowDeleteModal(null);
                                 }}
-                                className="btn btn-error btn-outline w-full rounded-xl"
+                                className="py-2.5 px-4 rounded-xl text-sm font-medium bg-[#2a3942] hover:bg-[#374248] text-[#e9edef] transition-colors cursor-pointer"
                               >
-                                Delete for everyone
+                                Delete for me
                               </button>
-                            )}
-                            <button
-                              onClick={() => {
-                                handleDeleteMessage(chat._id, "for_me");
-                                setShowDeleteModal(null);
-                              }}
-                              className="btn btn-base-300 w-full rounded-xl"
-                            >
-                              Delete for me
-                            </button>
-                            <button
-                              onClick={() => setShowDeleteModal(null)}
-                              className="btn btn-ghost w-full rounded-xl"
-                            >
-                              Cancel
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => setShowDeleteModal(null)}
+                                className="py-2 px-4 rounded-xl text-sm font-medium text-[#8696a0] hover:text-[#e9edef] transition-colors cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </React.Fragment>
                 );
@@ -1300,25 +1359,12 @@ const Chatting = ({
 
             {/* Live Typing Indicator Bubble */}
             {isFriendTyping && (
-              <div className="chat chat-receiver group relative animate-in fade-in slide-in-from-bottom-2 duration-200">
-                <div className="chat-avatar avatar">
-                  <div className="w-8 h-8 rounded-full border border-base-content/10 overflow-hidden">
-                    <img
-                      src={
-                        selectedFriend?.profilePic
-                          ? getMediaUrl(selectedFriend.profilePic)
-                          : `https://ui-avatars.com/api/?name=${selectedFriend?.fullName}`
-                      }
-                      alt="avatar"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                </div>
-                <div className="chat-bubble bg-base-100 shadow-sm border border-base-content/10 py-2.5 px-3.5 flex items-center gap-1.5 text-xs text-base-content/70">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]"></span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]"></span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce"></span>
-                  <span className="ml-1 text-[11px] font-medium text-base-content/60">
+              <div className="w-full flex justify-start px-2 sm:px-4 my-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="bg-[#202c33] text-[#8696a0] rounded-lg rounded-tl-none px-3.5 py-2.5 flex items-center gap-1.5 shadow-xs border border-[#2a3942]/40">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00a884] animate-bounce [animation-delay:-0.3s]"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00a884] animate-bounce [animation-delay:-0.15s]"></span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00a884] animate-bounce"></span>
+                  <span className="ml-1 text-[11px] font-medium text-[#8696a0]">
                     typing...
                   </span>
                 </div>
@@ -1339,7 +1385,7 @@ const Chatting = ({
                     Replying to{" "}
                     {replyingTo.senderId === user._id
                       ? "yourself"
-                      : selectedFriend?.fullName || "Friend"}
+                      : displayName || "Friend"}
                   </span>
                   <span className="text-base-content/70 text-[11px] truncate">
                     {replyingTo.messageType === "image"
