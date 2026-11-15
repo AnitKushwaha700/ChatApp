@@ -1,5 +1,6 @@
 import Message from "./messageModel.js";
 import Chat from "./chatModel.js";
+import User from "../user/userModel.js";
 import { OnlineUsers, getIo } from "../../core/socket/webSocket.js";
 
 export const SendMessage = async (req, res, next) => {
@@ -40,27 +41,42 @@ export const SendMessage = async (req, res, next) => {
     if (chatId) {
       activeChat = await Chat.findById(chatId);
     } else if (receiverID) {
-      activeChat = await Chat.findOne({
-        isGroupChat: false,
-        $and: [
-          { users: { $elemMatch: { $eq: currentUser._id } } },
-          { users: { $elemMatch: { $eq: receiverID } } },
-        ],
-      });
-      if (!activeChat) {
-        activeChat = await Chat.create({
+      // 1. Check if receiverID is actually an existing Chat._id
+      const possibleChat = await Chat.findById(receiverID);
+      if (possibleChat) {
+        activeChat = possibleChat;
+      } else {
+        // 2. Find existing 1-on-1 chat between currentUser and receiverID
+        activeChat = await Chat.findOne({
           isGroupChat: false,
-          chatName: "direct",
-          users: [currentUser._id, receiverID],
+          $and: [
+            { users: { $elemMatch: { $eq: currentUser._id } } },
+            { users: { $elemMatch: { $eq: receiverID } } },
+          ],
         });
+
+        // 3. If no chat exists, ensure receiverID is an authentic User before creating a chat
+        if (!activeChat) {
+          const validUser = await User.findById(receiverID);
+          if (validUser) {
+            activeChat = await Chat.create({
+              isGroupChat: false,
+              chatName: "direct",
+              users: [currentUser._id, receiverID],
+            });
+          }
+        }
       }
     }
 
     let targetReceiver = receiverID;
-    if (!targetReceiver && activeChat && !activeChat.isGroupChat) {
-      targetReceiver = activeChat.users.find(
+    if (activeChat && !activeChat.isGroupChat) {
+      const partner = activeChat.users.find(
         (u) => u.toString() !== currentUser._id.toString()
       );
+      if (partner) {
+        targetReceiver = partner;
+      }
     }
 
     let newMessage = await Message.create({
@@ -105,12 +121,16 @@ export const SendMessage = async (req, res, next) => {
         });
         io.to(activeChat._id.toString()).emit("newMessage", newMessage);
       } else {
-        const receiverSocketId = OnlineUsers[targetReceiver];
-        if (receiverSocketId) {
-          io.to(receiverSocketId).emit("newMessage", newMessage);
-        }
         if (activeChat) {
           io.to(activeChat._id.toString()).emit("newMessage", newMessage);
+        }
+        const receiverKey = targetReceiver?.toString();
+        const receiverSocketId = receiverKey ? OnlineUsers[receiverKey] : null;
+        // Only emit directly to receiver socket if they are not already connected to the active chat room
+        const roomSockets = activeChat ? io.sockets.adapter?.rooms?.get(activeChat._id.toString()) : null;
+        const receiverInRoom = roomSockets && receiverSocketId && roomSockets.has(receiverSocketId);
+        if (receiverSocketId && !receiverInRoom) {
+          io.to(receiverSocketId).emit("newMessage", newMessage);
         }
       }
     }

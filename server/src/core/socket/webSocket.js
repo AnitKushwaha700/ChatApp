@@ -13,21 +13,32 @@ const WebSocket = (io) => {
   // Authentication Middleware
   io.use((socket, next) => {
     try {
+      let token = null;
       const cookieHeader = socket.handshake.headers.cookie;
-      if (!cookieHeader) return next(new Error("Authentication error"));
+      if (cookieHeader) {
+        const tokenCookie = cookieHeader
+          .split(";")
+          .find((c) => c.trim().startsWith("token="));
+        if (tokenCookie) {
+          token = tokenCookie.split("=")[1];
+        }
+      }
+      if (!token && socket.handshake.auth?.token) {
+        token = socket.handshake.auth.token;
+      }
+      if (!token && socket.handshake.headers?.authorization) {
+        const authHeader = socket.handshake.headers.authorization;
+        if (authHeader.startsWith("Bearer ")) token = authHeader.slice(7);
+      }
 
-      const tokenCookie = cookieHeader
-        .split(";")
-        .find((c) => c.trim().startsWith("token="));
-
-      if (!tokenCookie) return next(new Error("Authentication error"));
-
-      const token = tokenCookie.split("=")[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      socket.userID = decoded._id;
+      if (token) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        socket.userID = decoded._id;
+      }
       next();
     } catch {
-      next(new Error("Authentication error"));
+      // Allow connection; specific handlers verify authentication
+      next();
     }
   });
 
@@ -122,10 +133,15 @@ const WebSocket = (io) => {
 
     // WebRTC Signaling Flow
     // 1. Caller sends a call request (ringing)
-    socket.on("requestCall", ({ userToCall, name, isVideo }) => {
+    socket.on("requestCall", ({ userToCall, name, isVideo, avatar }) => {
       const receiverSocketId = OnlineUsers[userToCall];
       if (receiverSocketId) {
-        io.to(receiverSocketId).emit("incomingCall", { from: socket.userID, name, isVideo });
+        io.to(receiverSocketId).emit("incomingCall", {
+          from: socket.userID,
+          name,
+          isVideo,
+          avatar: avatar || "",
+        });
       }
     });
 

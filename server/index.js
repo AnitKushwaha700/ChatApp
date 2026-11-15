@@ -11,6 +11,7 @@ import AuthRouter from "./src/modules/auth/authRouter.js";
 import UserRouter from "./src/modules/user/userRouter.js";
 import ChatRouter from "./src/modules/chat/chatRouter.js";
 import StatusRouter from "./src/modules/status/statusRouter.js";
+import CallRouter from "./src/modules/call/callRouter.js";
 
 import http from "http";
 import { Server } from "socket.io";
@@ -30,12 +31,12 @@ const allowedOrigins = [
 // Middlewares
 app.use(helmet({
   crossOriginResourcePolicy: false,
-  crossOriginOpenerPolicy: false
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }
 }));
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Limit each IP to 200 requests per window
-  message: { success: false, message: "Too many requests from this IP, please try again later" },
+  max: process.env.NODE_ENV === "production" ? 1000 : 10000,
+  message: { success: false, message: "Too many requests, please try again later" },
 });
 app.use(limiter);
 
@@ -46,6 +47,7 @@ app.use(
         !origin ||
         origin.startsWith("http://localhost") ||
         origin.startsWith("http://127.0.0.1") ||
+        origin.startsWith("http://[::1]") ||
         origin.startsWith("http://192.168.") ||
         origin.startsWith("http://172.") ||
         origin.startsWith("http://10.") ||
@@ -72,6 +74,8 @@ app.use("/chat", ChatRouter);
 app.use("/api/chats", ChatRouter);
 app.use("/status", StatusRouter);
 app.use("/api/status", StatusRouter);
+app.use("/call", CallRouter);
+app.use("/api/calls", CallRouter);
 
 // Health check
 app.get("/", (req, res) => {
@@ -106,6 +110,7 @@ const io = new Server(httpServer, {
         !origin ||
         origin.startsWith("http://localhost") ||
         origin.startsWith("http://127.0.0.1") ||
+        origin.startsWith("http://[::1]") ||
         origin.startsWith("http://192.168.") ||
         origin.startsWith("http://172.") ||
         origin.startsWith("http://10.") ||
@@ -123,7 +128,7 @@ const io = new Server(httpServer, {
 
 websocket(io);
 
-httpServer.listen(PORT, async () => {
+httpServer.listen(PORT, "0.0.0.0", async () => {
   await connectDB();
   console.log("Server started at port:", PORT);
 });
