@@ -1,7 +1,8 @@
-
+import React from "react";
 import { motion } from "motion/react";
 import { useModal } from "../context/ModalContext";
-import { MessageSquare, Zap, Shield, Users } from "lucide-react";
+import { MessageSquare } from "lucide-react";
+import heroBgImage from "../assets/chatApp-image.png";
 
 const Home = () => {
   const { openLogin } = useModal();
@@ -11,7 +12,7 @@ const Home = () => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.2,
+        staggerChildren: 0.15,
       },
     },
   };
@@ -21,93 +22,81 @@ const Home = () => {
     visible: {
       y: 0,
       opacity: 1,
-      transition: { type: "spring", stiffness: 100 },
+      transition: { type: "spring", stiffness: 100, damping: 14 },
     },
   };
 
   return (
-    <div className="min-h-[calc(100dvh-65px)] py-12 lg:py-0 bg-base-200 flex flex-col justify-center items-center px-4 overflow-x-hidden relative">
-      {/* Background decoration */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
+    <div className="min-h-[calc(100dvh-64px)] w-full bg-[#0E121A] flex flex-col justify-center items-center px-4 overflow-hidden relative select-none">
+      {/* Background 3D Illustration & Radial Green Glow */}
+      <div className="absolute inset-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+        {/* Background 3D characters image in grayscale so it catches the green lighting */}
         <motion.img
-          src="/chatApp-image.png"
-          alt="Background"
+          src={heroBgImage}
+          alt="ChatApp Background"
           animate={{
-            scale: [1.05, 1.15, 1.05],
-            x: ["-2%", "2%", "-2%"],
-            y: ["-2%", "2%", "-2%"],
+            scale: [1.02, 1.05, 1.02],
+            x: ["-1%", "1%", "-1%"],
+            y: ["-0.5%", "0.5%", "-0.5%"],
           }}
-          transition={{ duration: 30, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute top-0 left-0 w-full h-full object-cover opacity-15 md:opacity-25 pointer-events-none mix-blend-luminosity grayscale"
+          transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
+          className="w-full h-full object-cover object-center opacity-30 md:opacity-35 grayscale contrast-110 brightness-95"
         />
-        <motion.div
-          animate={{
-            scale: [1, 1.2, 1],
-            rotate: [0, 90, 0],
-          }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute top-[20%] left-[10%] w-[50%] h-[50%] rounded-full bg-primary/20 blur-[100px]"
-        />
-        <motion.div
-          animate={{
-            scale: [1, 1.5, 1],
-            rotate: [0, -90, 0],
-          }}
-          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute bottom-[10%] right-[10%] w-[40%] h-[40%] rounded-full bg-secondary/20 blur-[100px]"
-        />
+
+        {/* Ambient Dark Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0E121A]/50 via-transparent to-[#0E121A]/70" />
+
+        {/* Emerald green glow on left-center behind Chatter & Boy (sampled #04BC66) */}
+        <div className="absolute top-[12%] left-[5%] w-[55%] h-[60%] rounded-full bg-[#04BC66]/25 blur-[120px]" />
+
+        {/* Soft secondary ambient glow on bottom right */}
+        <div className="absolute bottom-[10%] right-[10%] w-[35%] h-[35%] rounded-full bg-[#04BC66]/10 blur-[100px]" />
       </div>
 
+      {/* Main Content Stack */}
       <motion.div
-        className="max-w-4xl w-full z-10 text-center"
+        className="max-w-3xl w-full z-10 text-center flex flex-col items-center py-6"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
-        <motion.div
-          variants={itemVariants}
-          className="mb-6 flex justify-center"
-        >
-          <div className="p-4 bg-primary/10 rounded-full text-primary">
-            <MessageSquare size={48} strokeWidth={1.5} />
+        {/* Green speech bubble outline icon badge (sampled #042314 bg, #1EA268 stroke) */}
+        <motion.div variants={itemVariants} className="mb-6 flex justify-center">
+          <div className="w-14 h-14 rounded-2xl bg-[#042314]/90 border-2 border-[#1EA268] text-[#1EA268] shadow-lg shadow-[#04BC66]/20 flex items-center justify-center">
+            <MessageSquare size={30} strokeWidth={2.4} />
           </div>
         </motion.div>
 
+        {/* Headline matching screenshot colors */}
         <motion.h1
           variants={itemVariants}
-          className="text-3xl sm:text-5xl md:text-7xl font-extrabold tracking-tight mb-4 sm:mb-6 text-base-content leading-tight px-2 sm:px-0"
+          className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight mb-5 text-white leading-[1.12]"
         >
-          Connect with{" "}
-          <span className="bg-clip-text text-transparent bg-linear-to-r from-primary to-secondary">
-            Anyone
-          </span>
-          ,<br />
+          Connect with <span className="text-[#4DC375]">Anyone,</span>
+          <br />
           Anywhere.
         </motion.h1>
 
+        {/* Subtitle */}
         <motion.p
           variants={itemVariants}
-          className="text-base sm:text-xl text-base-content/70 mb-8 sm:mb-10 max-w-2xl mx-auto px-4 sm:px-0"
+          className="text-sm sm:text-base md:text-lg text-[#8C9CA7] mb-8 max-w-xl mx-auto leading-relaxed px-4 font-normal"
         >
-          Experience lightning-fast, secure, and beautiful conversations. Join
-          our community and start chatting today.
+          Experience lightning-fast, secure, and beautiful conversations. Join our
+          community and start chatting today.
         </motion.p>
 
-        <motion.div
-          variants={itemVariants}
-          className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20"
-        >
+        {/* CTA Button in exact sampled #04BC66 */}
+        <motion.div variants={itemVariants} className="flex justify-center">
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="btn btn-primary btn-lg shadow-xl shadow-primary/30 w-full sm:w-auto rounded-full"
+            className="bg-[#04BC66] hover:bg-[#03A85B] text-white font-semibold text-sm sm:text-base px-8 py-3 rounded-full shadow-lg shadow-[#04BC66]/30 transition-all cursor-pointer"
             onClick={openLogin}
           >
             Start Chatting Now
           </motion.button>
-        </motion.div> 
-
-
+        </motion.div>
       </motion.div>
     </div>
   );
