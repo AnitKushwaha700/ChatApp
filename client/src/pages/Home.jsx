@@ -1,18 +1,31 @@
 import React from "react";
 import { motion } from "motion/react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../features/auth/AuthContext";
 import { useModal } from "../context/ModalContext";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Shield, Zap, Video, Palette } from "lucide-react";
 import heroBgImage from "../assets/chatApp-image.png";
+import InstallAppCard from "../components/ui/InstallAppCard";
 
 const Home = () => {
+  const { isLogin } = useAuth();
+  const navigate = useNavigate();
   const { openLogin } = useModal();
+
+  const handleStartChatting = () => {
+    if (isLogin) {
+      navigate("/chat");
+    } else {
+      openLogin();
+    }
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.15,
+        staggerChildren: 0.12,
       },
     },
   };
@@ -27,10 +40,9 @@ const Home = () => {
   };
 
   return (
-    <div className="min-h-[calc(100dvh-64px)] w-full bg-[#0E121A] flex flex-col justify-center items-center px-4 overflow-hidden relative select-none">
-      {/* Background 3D Illustration & Radial Green Glow */}
+    <div className="min-h-[calc(100dvh-64px)] w-full bg-base-100 text-base-content flex flex-col justify-between items-center py-6 sm:py-10 px-4 overflow-x-hidden relative select-none transition-colors duration-200">
+      {/* Background 3D Illustration & Radial Green Ambient Glow */}
       <div className="absolute inset-0 w-full h-full overflow-hidden z-0 pointer-events-none">
-        {/* Background 3D characters image in grayscale so it catches the green lighting */}
         <motion.img
           src={heroBgImage}
           alt="ChatApp Background"
@@ -40,39 +52,40 @@ const Home = () => {
             y: ["-0.5%", "0.5%", "-0.5%"],
           }}
           transition={{ duration: 25, repeat: Infinity, ease: "easeInOut" }}
-          className="w-full h-full object-cover object-center opacity-30 md:opacity-35 grayscale contrast-110 brightness-95"
+          className="w-full h-full object-cover object-center opacity-20 dark:opacity-35 grayscale contrast-110 brightness-95 mix-blend-luminosity"
         />
 
-        {/* Ambient Dark Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0E121A]/50 via-transparent to-[#0E121A]/70" />
+        {/* Ambient Dark Gradient Layer */}
+        <div className="absolute inset-0 bg-gradient-to-b from-base-100/60 via-transparent to-base-100/90" />
 
-        {/* Emerald green glow on left-center behind Chatter & Boy (sampled #04BC66) */}
-        <div className="absolute top-[12%] left-[5%] w-[55%] h-[60%] rounded-full bg-[#04BC66]/25 blur-[120px]" />
-
-        {/* Soft secondary ambient glow on bottom right */}
-        <div className="absolute bottom-[10%] right-[10%] w-[35%] h-[35%] rounded-full bg-[#04BC66]/10 blur-[100px]" />
+        {/* Emerald green radial glow */}
+        <div className="absolute top-[8%] left-[5%] w-[55%] h-[60%] rounded-full bg-[#04BC66]/15 blur-[120px]" />
+        <div className="absolute bottom-[5%] right-[10%] w-[40%] h-[40%] rounded-full bg-[#04BC66]/10 blur-[100px]" />
       </div>
 
-      {/* Main Content Stack */}
+      {/* Main Hero Stack */}
       <motion.div
-        className="max-w-3xl w-full z-10 text-center flex flex-col items-center py-6"
+        className="max-w-4xl w-full z-10 text-center flex flex-col items-center my-auto pt-2 pb-6"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
       >
-        {/* Green speech bubble outline icon badge (sampled #042314 bg, #1EA268 stroke) */}
-        <motion.div variants={itemVariants} className="mb-6 flex justify-center">
-          <div className="w-14 h-14 rounded-2xl bg-[#042314]/90 border-2 border-[#1EA268] text-[#1EA268] shadow-lg shadow-[#04BC66]/20 flex items-center justify-center">
-            <MessageSquare size={30} strokeWidth={2.4} />
+        {/* Green speech bubble outline icon badge */}
+        <motion.div variants={itemVariants} className="mb-4 sm:mb-6 flex justify-center">
+          <div className="p-3.5 sm:p-4 bg-[#04BC66]/15 rounded-3xl text-[#04BC66] shadow-lg shadow-[#04BC66]/20 border border-[#04BC66]/20">
+            <MessageSquare size={40} strokeWidth={2} />
           </div>
         </motion.div>
 
-        {/* Headline matching screenshot colors */}
+        {/* Headline */}
         <motion.h1
           variants={itemVariants}
-          className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight mb-5 text-white leading-[1.12]"
+          className="text-4xl sm:text-6xl md:text-7xl font-black tracking-tight mb-4 sm:mb-5 text-base-content leading-[1.12]"
         >
-          Connect with <span className="text-[#4DC375]">Anyone,</span>
+          Connect with{" "}
+          <span className="text-[#04BC66] bg-clip-text text-transparent bg-gradient-to-r from-[#04BC66] to-[#009b55]">
+            Anyone,
+          </span>
           <br />
           Anywhere.
         </motion.h1>
@@ -80,22 +93,49 @@ const Home = () => {
         {/* Subtitle */}
         <motion.p
           variants={itemVariants}
-          className="text-sm sm:text-base md:text-lg text-[#8C9CA7] mb-8 max-w-xl mx-auto leading-relaxed px-4 font-normal"
+          className="text-base sm:text-lg md:text-xl text-base-content/75 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed px-4 font-normal"
         >
-          Experience lightning-fast, secure, and beautiful conversations. Join our
-          community and start chatting today.
+          Experience lightning-fast, secure, and beautiful real-time conversations. Join our community and start chatting today.
         </motion.p>
 
-        {/* CTA Button in exact sampled #04BC66 */}
-        <motion.div variants={itemVariants} className="flex justify-center">
+        {/* Primary CTA Button */}
+        <motion.div variants={itemVariants} className="flex justify-center mb-8 sm:mb-10">
           <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="bg-[#04BC66] hover:bg-[#03A85B] text-white font-semibold text-sm sm:text-base px-8 py-3 rounded-full shadow-lg shadow-[#04BC66]/30 transition-all cursor-pointer"
-            onClick={openLogin}
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            className="bg-[#04BC66] hover:bg-[#03A85B] text-white font-bold text-base sm:text-lg px-9 py-4 rounded-full shadow-xl shadow-[#04BC66]/30 transition-all cursor-pointer"
+            onClick={handleStartChatting}
           >
             Start Chatting Now
           </motion.button>
+        </motion.div>
+
+        {/* PWA Mobile & Desktop Install Card */}
+        <motion.div variants={itemVariants} className="w-full flex justify-center mb-6">
+          <InstallAppCard />
+        </motion.div>
+
+        {/* Core Pillars Feature Badges */}
+        <motion.div
+          variants={itemVariants}
+          className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl w-full pt-4 border-t border-base-content/10"
+        >
+          <div className="flex items-center justify-center gap-2 p-2 rounded-xl bg-base-200/50 text-xs font-semibold text-base-content/80">
+            <Zap size={14} className="text-[#04BC66]" />
+            <span>Instant Socket</span>
+          </div>
+          <div className="flex items-center justify-center gap-2 p-2 rounded-xl bg-base-200/50 text-xs font-semibold text-base-content/80">
+            <Video size={14} className="text-[#04BC66]" />
+            <span>Audio & Video</span>
+          </div>
+          <div className="flex items-center justify-center gap-2 p-2 rounded-xl bg-base-200/50 text-xs font-semibold text-base-content/80">
+            <Shield size={14} className="text-[#04BC66]" />
+            <span>DPDP Secure</span>
+          </div>
+          <div className="flex items-center justify-center gap-2 p-2 rounded-xl bg-base-200/50 text-xs font-semibold text-base-content/80">
+            <Palette size={14} className="text-[#04BC66]" />
+            <span>16+ Themes</span>
+          </div>
         </motion.div>
       </motion.div>
     </div>

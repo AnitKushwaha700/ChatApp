@@ -39,7 +39,8 @@ import {
 import EmojiPicker from "emoji-picker-react";
 import { motion } from "motion/react";
 import VoiceNotePlayer from "./VoiceNotePlayer";
-import { applyTheme } from "../../lib/theme";
+import CameraModal from "./CameraModal";
+import { applyTheme, THEME_LIST, getSavedTheme } from "../../lib/theme";
 
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
@@ -133,8 +134,9 @@ const Chatting = ({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(null);
   const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
-  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [isClearChatModalOpen, setIsClearChatModalOpen] = useState(false);
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+  const cameraCaptureInputRef = useRef(null);
 
   // Advanced messaging states
   const [isFriendTyping, setIsFriendTyping] = useState(false);
@@ -345,11 +347,26 @@ const Chatting = ({
     scrollToMessage(matchedMessageIds[prevIdx]);
   };
 
-  const handleMessageSend = async (e, type = "text", file = null) => {
-    e?.preventDefault();
-    if (editingMessage) {
-      return handleEditMessage(e);
+  const handleMessageSend = async (
+    eOrCaption,
+    type = "text",
+    file = null,
+    customCaption = ""
+  ) => {
+    if (eOrCaption && typeof eOrCaption?.preventDefault === "function") {
+      eOrCaption.preventDefault();
     }
+    if (editingMessage) {
+      return handleEditMessage(eOrCaption);
+    }
+
+    const captionText =
+      typeof customCaption === "string" && customCaption.trim()
+        ? customCaption.trim()
+        : typeof eOrCaption === "string" && eOrCaption.trim()
+        ? eOrCaption.trim()
+        : "";
+
     if (type === "text" && !message.trim()) return;
 
     const typingTarget = targetReceiverId || targetChatId;
@@ -363,7 +380,7 @@ const Chatting = ({
     try {
       if (type === "text") {
         const payload = {
-          message,
+          message: message.trim(),
           messageType: "text",
           repliedTo: repliedToId,
         };
@@ -379,6 +396,9 @@ const Chatting = ({
         if (targetReceiverId) formData.append("receiverID", targetReceiverId);
         formData.append("messageType", type);
         formData.append("media", file);
+        if (captionText) {
+          formData.append("message", captionText);
+        }
         if (repliedToId) {
           formData.append("repliedTo", repliedToId);
         }
@@ -736,7 +756,7 @@ const Chatting = ({
   return (
     <div className="flex flex-col h-full w-full relative">
       {/* Header */}
-      <div className="p-3 sm:px-4 flex items-center justify-between border-b border-base-content/10 bg-base-200 shrink-0">
+      <div className="p-3 sm:px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] flex items-center justify-between border-b border-base-content/10 bg-base-200 shrink-0">
         <div
           onClick={() => {
             if (selectedFriend?.isGroupChat && onOpenGroupInfo) {
@@ -844,15 +864,6 @@ const Chatting = ({
             <div className="absolute top-10 right-8 bg-base-100 border border-base-content/10 rounded-lg shadow-xl z-50 w-36 overflow-hidden">
               <button
                 onClick={() => {
-                  setIsThemeModalOpen(true);
-                  setIsHeaderMenuOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 text-sm hover:bg-base-200 transition-colors border-none outline-none cursor-pointer"
-              >
-                Theme
-              </button>
-              <button
-                onClick={() => {
                   setIsClearChatModalOpen(true);
                   setIsHeaderMenuOpen(false);
                 }}
@@ -919,82 +930,6 @@ const Chatting = ({
             >
               <X size={16} />
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Theme Modal */}
-      {isThemeModalOpen && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
-          <div className="bg-base-100 p-6 rounded-2xl shadow-2xl w-full max-w-sm flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200 border border-base-content/5">
-            <div className="flex justify-between items-center mb-1">
-              <div className="flex items-center gap-2">
-                <Palette size={20} className="text-primary" />
-                <h3 className="font-bold text-xl text-base-content">
-                  Appearance
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsThemeModalOpen(false)}
-                className="btn btn-sm btn-circle btn-ghost hover:bg-base-content/10"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="flex flex-col gap-3 max-h-[60vh] overflow-y-auto custom-scrollbar pr-1 -mr-1 pb-2">
-              {[
-                { id: "light", name: "Light Mode", icon: Sun },
-                { id: "dark", name: "Dark Mode", icon: Moon },
-                { id: "black", name: "Midnight", icon: MoonStar },
-                { id: "spotify", name: "Spotify", icon: Music },
-                { id: "claude", name: "Claude", icon: MessageSquare },
-                { id: "corporate", name: "Corporate", icon: Briefcase },
-                { id: "ghibli", name: "Ghibli", icon: Leaf },
-                { id: "pastel", name: "Pastel", icon: Cloud },
-              ].map((theme) => {
-                const Icon = theme.icon;
-                const isActive = (localStorage.getItem("theme") || "dark") === theme.id;
-                
-                return (
-                <button
-                  key={theme.id}
-                  data-theme={theme.id}
-                  onClick={() => {
-                    applyTheme(theme.id, true);
-                    setIsThemeModalOpen(false);
-                  }}
-                  className={`relative flex items-center justify-between w-full p-4 rounded-2xl transition-all duration-300 overflow-hidden group border-2 bg-base-100 text-base-content ${
-                    isActive 
-                      ? "border-primary shadow-xl scale-[1.02] ring-4 ring-primary/10 z-10" 
-                      : "border-transparent hover:border-primary/30 hover:scale-[1.01] shadow-sm hover:shadow-md"
-                  }`}
-                >
-                  <div className="flex items-center gap-4 relative z-10">
-                    <div className="p-2.5 rounded-xl bg-primary text-primary-content shadow-sm group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
-                      <Icon size={22} />
-                    </div>
-                    <div className="flex flex-col items-start">
-                       <span className="font-bold text-base tracking-tight">{theme.name}</span>
-                       <div className="flex gap-1.5 mt-1.5">
-                          <div className="w-3.5 h-3.5 rounded-full bg-primary shadow-sm" title="Primary"></div>
-                          <div className="w-3.5 h-3.5 rounded-full bg-secondary shadow-sm" title="Secondary"></div>
-                          <div className="w-3.5 h-3.5 rounded-full bg-accent shadow-sm" title="Accent"></div>
-                          <div className="w-3.5 h-3.5 rounded-full bg-neutral shadow-sm" title="Neutral"></div>
-                       </div>
-                    </div>
-                  </div>
-                  
-                  {isActive && (
-                    <div className="relative z-10 bg-primary text-primary-content rounded-full p-1.5 shadow-md animate-in zoom-in duration-300">
-                      <Check size={18} strokeWidth={3} />
-                    </div>
-                  )}
-                  
-                  {/* Decorative background element to show off base-200/base-300 */}
-                  <div className="absolute right-0 top-0 bottom-0 w-32 bg-linear-to-l from-base-200 to-transparent z-0 opacity-80"></div>
-                </button>
-              )})}
-            </div>
           </div>
         </div>
       )}
@@ -1481,9 +1416,21 @@ const Chatting = ({
                     </button>
                     <button
                       type="button"
-                      className="flex items-center gap-4 hover:bg-base-200 p-2.5 rounded-xl transition-all text-left text-sm font-medium text-base-content opacity-50 cursor-not-allowed"
+                      onClick={() => {
+                        setIsAttachmentOpen(false);
+                        if (
+                          typeof navigator !== "undefined" &&
+                          navigator.mediaDevices &&
+                          navigator.mediaDevices.getUserMedia
+                        ) {
+                          setIsCameraModalOpen(true);
+                        } else {
+                          cameraCaptureInputRef.current?.click();
+                        }
+                      }}
+                      className="flex items-center gap-4 hover:bg-base-200 p-2.5 rounded-xl transition-all text-left text-sm font-medium text-base-content cursor-pointer"
                     >
-                      <div className="bg-[#FF3B30] text-white p-2.5 rounded-full shadow-sm">
+                      <div className="bg-[#FF3B30] text-white p-2.5 rounded-full shadow-sm hover:scale-105 transition-transform">
                         <Camera size={18} />
                       </div>{" "}
                       Camera
@@ -1592,6 +1539,24 @@ const Chatting = ({
             </form>
           </div>
 
+      {/* Fallback Native Camera Input */}
+      <input
+        type="file"
+        ref={cameraCaptureInputRef}
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {/* WhatsApp Live Camera Modal */}
+      <CameraModal
+        isOpen={isCameraModalOpen}
+        onClose={() => setIsCameraModalOpen(false)}
+        onCapture={(file, caption) => {
+          handleMessageSend(null, "image", file, caption);
+        }}
+      />
     </div>
   );
 };

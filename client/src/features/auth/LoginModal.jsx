@@ -1,21 +1,50 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import api from "../../lib/api";
 import { useAuth } from "./AuthContext";
 import { useModal } from "../../context/ModalContext";
 import { motion } from "motion/react";
-import { X } from "lucide-react";
+import { X, KeyRound, Mail, ArrowLeft, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import GoogleAuthButton from "../../components/ui/GoogleAuthButton";
+import OtpInput from "../../components/ui/OtpInput";
+import PasswordStrength from "../../components/ui/PasswordStrength";
 
 const LoginModal = () => {
   const { setUser, setIsLogin } = useAuth();
-  const { closeLogin, openRegister } = useModal();
+  const { closeLogin, openRegister, initialLoginView } = useModal();
   const navigate = useNavigate();
 
-  const [view, setView] = useState("login"); // "login", "forgot_password_email", "forgot_password_otp"
+  const [view, setView] = useState(() => {
+    return typeof initialLoginView === "string" &&
+      ["login", "forgot_password_email", "forgot_password_otp"].includes(initialLoginView)
+      ? initialLoginView
+      : "login";
+  });
   const [formData, setFormData] = useState({ email: "", password: "", otp: "", newPassword: "" });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (
+      typeof initialLoginView === "string" &&
+      ["login", "forgot_password_email", "forgot_password_otp"].includes(initialLoginView)
+    ) {
+      setView(initialLoginView);
+    } else {
+      setView("login");
+    }
+  }, [initialLoginView]);
+
+  // 60-second cooldown timer
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -25,13 +54,17 @@ const LoginModal = () => {
   const handleClearForm = () => {
     setFormData({ email: "", password: "", otp: "", newPassword: "" });
     setView("login");
+    setCooldown(0);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await api.post("/auth/login", formData);
+      const res = await api.post("/auth/login", {
+        email: formData.email.trim(),
+        password: formData.password,
+      });
       toast.success(res.data.message);
       sessionStorage.setItem("AppUser", JSON.stringify(res.data.data));
       setUser(res.data.data);
@@ -48,11 +81,16 @@ const LoginModal = () => {
   };
 
   const handleForgotPassword = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
+    if (cooldown > 0) return;
     setLoading(true);
     try {
-      const res = await api.post("/auth/forgot-password", { email: formData.email });
+      const res = await api.post("/auth/forgot-password", { email: formData.email.trim() });
       toast.success(res.data.message);
+      setCooldown(60);
+      if (res.data?.devOtp) {
+        setFormData((prev) => ({ ...prev, otp: res.data.devOtp }));
+      }
       setView("forgot_password_otp");
     } catch (error) {
       console.log(error);
@@ -139,11 +177,12 @@ const LoginModal = () => {
                 required
                 className="input input-bordered w-full h-11 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors"
               />
-              <div className="flex justify-end mt-1">
+              <div className="flex justify-between items-center mt-1.5">
+                <span className="text-xs text-base-content/60">Having trouble?</span>
                 <button
                   type="button"
                   onClick={() => setView("forgot_password_email")}
-                  className="text-xs text-primary hover:underline font-medium cursor-pointer"
+                  className="text-xs font-semibold text-[#00a884] hover:text-[#00c897] hover:underline cursor-pointer transition-colors"
                 >
                   Forgot password?
                 </button>
@@ -193,20 +232,31 @@ const LoginModal = () => {
 
         {view === "forgot_password_email" && (
           <>
-            <h2 className="text-3xl font-bold text-primary mb-2">Reset Password</h2>
-            <p className="text-base-content/70 mb-8">
-              Enter your email address to receive an OTP
+            <div className="flex items-center gap-3 mb-2">
+              <button
+                type="button"
+                onClick={() => setView("login")}
+                className="p-1 rounded-full hover:bg-base-200 text-base-content/70 hover:text-base-content transition-colors cursor-pointer"
+                title="Back to login"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <h2 className="text-2xl sm:text-3xl font-bold text-primary">Forgot Password</h2>
+            </div>
+            <p className="text-base-content/70 text-sm mb-6">
+              Enter your registered email address and we'll send you a 6-digit OTP code to reset your password.
             </p>
 
             <form onSubmit={handleForgotPassword} className="space-y-5">
               <div className="space-y-1">
-                <label className="text-sm font-medium text-base-content/80">
-                  Email Address
+                <label className="text-sm font-medium text-base-content/80 flex items-center gap-1.5">
+                  <Mail className="w-4 h-4 text-[#00a884]" />
+                  <span>Email Address</span>
                 </label>
                 <input
                   type="email"
                   name="email"
-                  placeholder="Enter your email"
+                  placeholder="Enter your registered email"
                   value={formData.email}
                   onChange={handleChange}
                   disabled={loading}
@@ -224,10 +274,10 @@ const LoginModal = () => {
                   {loading ? (
                     <div className="flex items-center gap-2">
                       <span className="loading loading-spinner loading-sm"></span>
-                      <span>Sending OTP...</span>
+                      <span>Sending OTP Code...</span>
                     </div>
                   ) : (
-                    "Send OTP"
+                    "Send Verification Code"
                   )}
                 </button>
               </div>
@@ -236,9 +286,10 @@ const LoginModal = () => {
             <div className="mt-6 text-center">
               <button
                 onClick={() => setView("login")}
-                className="text-sm text-primary font-semibold hover:underline"
+                className="text-sm text-primary font-semibold hover:underline inline-flex items-center gap-1.5 cursor-pointer"
               >
-                Back to Login
+                <ArrowLeft className="w-4 h-4" />
+                <span>Return to Sign In</span>
               </button>
             </div>
           </>
@@ -246,55 +297,88 @@ const LoginModal = () => {
 
         {view === "forgot_password_otp" && (
           <>
-            <h2 className="text-3xl font-bold text-primary mb-2">Enter OTP</h2>
-            <p className="text-base-content/70 mb-8">
-              Check your email for the 6-digit code
+            <div className="flex items-center gap-3 mb-2">
+              <button
+                type="button"
+                onClick={() => setView("forgot_password_email")}
+                className="p-1 rounded-full hover:bg-base-200 text-base-content/70 hover:text-base-content transition-colors cursor-pointer"
+                title="Change email"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <h2 className="text-2xl sm:text-3xl font-bold text-primary">Verify & Reset</h2>
+            </div>
+            <p className="text-base-content/70 text-sm mb-5">
+              Enter the 6-digit OTP code sent to <span className="font-semibold text-base-content">{formData.email}</span>
             </p>
 
-            <form onSubmit={handleResetPassword} className="space-y-5">
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-base-content/80">
-                  OTP Code
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-base-content/80 uppercase tracking-wider flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-[#00a884]" />
+                  <span>Enter 6-Digit Code</span>
                 </label>
-                <input
-                  type="text"
-                  name="otp"
-                  placeholder="Enter 6-digit OTP"
+                <OtpInput
                   value={formData.otp}
-                  onChange={handleChange}
+                  onChange={(val) => setFormData((prev) => ({ ...prev, otp: val }))}
                   disabled={loading}
-                  required
-                  className="input input-bordered w-full h-11 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors tracking-widest text-center text-xl"
-                  maxLength="6"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-sm font-medium text-base-content/80">
-                  New Password
+                <label className="text-sm font-medium text-base-content/80 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <KeyRound className="w-4 h-4 text-[#00a884]" />
+                    <span>New Password</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-xs text-base-content/60 hover:text-base-content flex items-center gap-1 cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    <span>{showPassword ? "Hide" : "Show"}</span>
+                  </button>
                 </label>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   name="newPassword"
-                  placeholder="Enter new password"
+                  placeholder="Enter new strong password"
                   value={formData.newPassword}
                   onChange={handleChange}
                   disabled={loading}
                   required
                   className="input input-bordered w-full h-11 rounded-xl bg-base-200/50 focus:bg-base-100 transition-colors"
                 />
+                <PasswordStrength password={formData.newPassword} />
+              </div>
+
+              <div className="flex justify-between items-center text-xs pt-1">
+                <span className="text-base-content/60">Didn't receive code?</span>
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={loading || cooldown > 0}
+                  className={`font-semibold transition-colors cursor-pointer ${
+                    cooldown > 0
+                      ? "text-base-content/40 cursor-not-allowed"
+                      : "text-[#00a884] hover:text-[#00c897] hover:underline"
+                  }`}
+                >
+                  {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend Code"}
+                </button>
               </div>
 
               <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || formData.otp.length < 6 || formData.newPassword.length < 6}
                   className="btn btn-primary w-full h-12 rounded-xl text-primary-content font-semibold text-base shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 flex items-center justify-center gap-2"
                 >
                   {loading ? (
                     <div className="flex items-center gap-2">
                       <span className="loading loading-spinner loading-sm"></span>
-                      <span>Resetting Password...</span>
+                      <span>Updating Password...</span>
                     </div>
                   ) : (
                     "Reset Password"
@@ -303,12 +387,13 @@ const LoginModal = () => {
               </div>
             </form>
 
-            <div className="mt-6 text-center">
+            <div className="mt-5 text-center">
               <button
                 onClick={() => setView("login")}
-                className="text-sm text-primary font-semibold hover:underline"
+                className="text-sm text-primary font-semibold hover:underline inline-flex items-center gap-1.5 cursor-pointer"
               >
-                Back to Login
+                <ArrowLeft className="w-4 h-4" />
+                <span>Return to Sign In</span>
               </button>
             </div>
           </>

@@ -56,9 +56,9 @@ const NewChatDrawer = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-y-0 left-0 sm:left-[60px] z-40 w-full sm:w-[420px] bg-[#111b21] border-r border-[#222e35] shadow-2xl flex flex-col h-full animate-in slide-in-from-left duration-200 text-[#e9edef] select-none">
+    <div className="fixed inset-y-0 left-0 md:left-[60px] z-40 w-full md:w-[380px] lg:w-[420px] bg-[#111b21] border-r border-[#222e35] shadow-2xl flex flex-col h-full animate-in slide-in-from-left duration-200 text-[#e9edef] select-none">
       {/* Top Header */}
-      <div className="h-[108px] bg-[#202c33] flex items-end px-5 pb-4 gap-6 border-b border-[#222e35] shrink-0">
+      <div className="h-[calc(60px+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-[#202c33] px-4 flex items-center gap-4 border-b border-[#222e35] shrink-0">
         <button
           onClick={onClose}
           className="p-1 rounded-full hover:bg-[#374248] text-[#aebac1] hover:text-[#e9edef] transition-colors cursor-pointer"

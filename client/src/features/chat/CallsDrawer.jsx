@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   Search,
   Phone,
+  PhoneCall,
   Video,
   PhoneIncoming,
   PhoneOutgoing,
@@ -146,9 +147,9 @@ const CallsDrawer = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-y-0 left-0 sm:left-[60px] z-40 w-full sm:w-[420px] bg-[#111b21] text-[#e9edef] border-r border-[#222e35] shadow-2xl flex flex-col animate-in slide-in-from-left duration-200 select-none">
+    <div className="fixed inset-y-0 left-0 md:left-[60px] z-40 w-full md:w-[380px] lg:w-[420px] pb-20 md:pb-0 bg-[#111b21] text-[#e9edef] border-r border-[#222e35] shadow-2xl flex flex-col animate-in slide-in-from-left duration-200 select-none">
       {/* Header */}
-      <div className="h-[60px] bg-[#202c33] px-4 flex items-center justify-between border-b border-[#222e35] shrink-0">
+      <div className="h-[calc(60px+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-[#202c33] px-4 flex items-center justify-between border-b border-[#222e35] shrink-0">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -428,6 +429,16 @@ const CallsDrawer = ({
           </div>
         </div>
       )}
+
+      {/* Mobile Floating Action Button (New Call) */}
+      <button
+        type="button"
+        onClick={() => setIsNewCallModalOpen(true)}
+        className="md:hidden fixed bottom-20 right-5 w-14 h-14 rounded-2xl bg-[#00a884] hover:bg-[#008f72] text-white flex items-center justify-center shadow-2xl active:scale-95 transition-transform cursor-pointer border-none z-40"
+        title="Start new call"
+      >
+        <PhoneCall size={24} />
+      </button>
     </div>
   );
 };

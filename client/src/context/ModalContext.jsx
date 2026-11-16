@@ -8,13 +8,25 @@ export const useModal = () => useContext(ModalContext);
 export const ModalProvider = ({ children }) => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [initialLoginView, setInitialLoginView] = useState("login");
 
-  const openLogin = () => {
+  const openLogin = (view) => {
     setIsRegisterOpen(false);
+    const targetView = typeof view === "string" ? view : "login";
+    setInitialLoginView(targetView);
     setIsLoginOpen(true);
   };
 
-  const closeLogin = () => setIsLoginOpen(false);
+  const closeLogin = () => {
+    setIsLoginOpen(false);
+    setInitialLoginView("login");
+  };
+
+  const openForgotPassword = () => {
+    setIsRegisterOpen(false);
+    setInitialLoginView("forgot_password_email");
+    setIsLoginOpen(true);
+  };
 
   const openRegister = () => {
     setIsLoginOpen(false);
@@ -29,6 +41,9 @@ export const ModalProvider = ({ children }) => {
         isLoginOpen,
         openLogin,
         closeLogin,
+        openForgotPassword,
+        initialLoginView,
+        setInitialLoginView,
         isRegisterOpen,
         openRegister,
         closeRegister,

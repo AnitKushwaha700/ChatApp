@@ -91,7 +91,7 @@ const NewGroupDrawer = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-y-0 left-0 sm:left-[60px] z-40 w-full sm:w-[420px] bg-[#111b21] border-r border-[#222e35] shadow-2xl flex flex-col h-full animate-in slide-in-from-left duration-200 text-[#e9edef]">
+    <div className="fixed inset-y-0 left-0 md:left-[60px] z-40 w-full md:w-[380px] lg:w-[420px] bg-[#111b21] border-r border-[#222e35] shadow-2xl flex flex-col h-full animate-in slide-in-from-left duration-200 text-[#e9edef]">
       {/* Header */}
       <div className="h-16 bg-[#008069] dark:bg-[#202c33] text-white flex items-center gap-6 px-4 pt-[calc(env(safe-area-inset-top))] shrink-0">
         <button

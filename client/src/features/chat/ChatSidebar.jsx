@@ -280,11 +280,14 @@ const ChatSidebar = ({
   const archivedCount = chats.filter((c) => c.isArchived || c.archivedBy?.includes(user?._id)).length;
 
   return (
-    <div className="w-full md:w-[380px] lg:w-[420px] h-full bg-[#111b21] border-r border-[#222e35] flex flex-col shrink-0 select-none">
+    <div className="w-full md:w-[380px] lg:w-[420px] h-full pb-20 md:pb-0 bg-[#111b21] border-r border-[#222e35] flex flex-col shrink-0 select-none relative">
       {/* Top Header */}
-      <div className="h-[60px] bg-[#202c33] px-4 flex items-center justify-between border-b border-[#222e35] shrink-0">
-        <h1 className="text-[20px] font-bold text-[#e9edef] tracking-tight">Chats</h1>
-        <div className="flex items-center gap-1 relative" ref={headerMenuRef}>
+      <div className="h-[calc(60px+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-[#202c33] px-4 flex items-center justify-between border-b border-[#222e35] shrink-0">
+        <h1 className="text-[20px] font-bold tracking-tight">
+          <span className="text-[#00a884] md:hidden text-[22px]">WhatsApp</span>
+          <span className="hidden md:inline text-[#e9edef]">Chats</span>
+        </h1>
+        <div className="flex items-center gap-1.5 relative" ref={headerMenuRef}>
           <button
             onClick={onOpenNewChat}
             title="New chat"
@@ -328,22 +331,12 @@ const ChatSidebar = ({
               <button
                 onClick={() => {
                   setIsHeaderMenuOpen(false);
-                  onOpenThemeModal?.();
+                  setShowArchived((prev) => !prev);
                 }}
                 className="w-full text-left px-4 py-2.5 text-sm text-[#e9edef] hover:bg-[#111b21] transition-colors flex items-center gap-3 cursor-pointer"
               >
-                <Palette className="w-4 h-4 text-[#8696a0]" />
-                <span>Theme</span>
-              </button>
-              <button
-                onClick={() => {
-                  setIsHeaderMenuOpen(false);
-                  onOpenSettings?.();
-                }}
-                className="w-full text-left px-4 py-2.5 text-sm text-[#e9edef] hover:bg-[#111b21] transition-colors flex items-center gap-3 cursor-pointer"
-              >
-                <Settings className="w-4 h-4 text-[#8696a0]" />
-                <span>Settings</span>
+                <Archive className="w-4 h-4 text-[#8696a0]" />
+                <span>{showArchived ? "All chats" : "Archived chats"}</span>
               </button>
               <div className="h-px bg-[#2a3942] my-1" />
               <button
@@ -715,6 +708,15 @@ const ChatSidebar = ({
           </button>
         </div>
       )}
+      {/* Mobile Floating Action Button (New Chat) */}
+      <button
+        type="button"
+        onClick={onOpenNewChat}
+        className="md:hidden fixed bottom-20 right-5 w-14 h-14 rounded-2xl bg-[#00a884] hover:bg-[#008f72] active:scale-95 text-white flex items-center justify-center shadow-2xl z-40 transition-transform cursor-pointer border-none"
+        title="New chat"
+      >
+        <MessageSquarePlus size={26} />
+      </button>
     </div>
   );
 };
