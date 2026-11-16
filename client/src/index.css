@@ -4,6 +4,34 @@ html, body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro", "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
     overflow-x: hidden;
     width: 100%;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* FlyonUI Theme Distinct Typography & Styling */
+[data-theme='ghibli'], [data-theme='ghibli'] body {
+    font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif !important;
+}
+
+[data-theme='retro'], [data-theme='retro'] body {
+    font-family: "Courier New", Courier, monospace, serif !important;
+}
+
+[data-theme='claude'], [data-theme='claude'] body {
+    font-family: Charter, Georgia, "Times New Roman", serif !important;
+}
+
+[data-theme='cyberpunk'], [data-theme='cyberpunk'] body {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+    letter-spacing: 0.02em;
+}
+
+[data-theme='luxury'], [data-theme='luxury'] body {
+    font-family: "Times New Roman", Times, Georgia, serif !important;
+}
+
+[data-theme='synthwave'], [data-theme='synthwave'] body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    letter-spacing: 0.03em;
 }
 
 @plugin "flyonui" {
@@ -372,22 +400,202 @@ html, body {
     --wa-card: #2d233d;
 }
 
+[data-theme='gourmet'] {
+    --wa-bg: #fff7ed;
+    --wa-header: #ffedd5;
+    --wa-sidebar: #fff7ed;
+    --wa-rail: #fed7aa;
+    --wa-border: #fed7aa;
+    --wa-text: #7c2d12;
+    --wa-muted: #9a3412;
+    --wa-hover: #ffedd5;
+    --wa-active: #fed7aa;
+    --wa-input: #ffedd5;
+    --wa-accent: #ea580c;
+    --wa-accent-hover: #c2410c;
+    --wa-bubble-out: #fed7aa;
+    --wa-bubble-out-text: #7c2d12;
+    --wa-bubble-in: #ffffff;
+    --wa-bubble-in-text: #7c2d12;
+    --wa-chat-empty: #fffaf5;
+    --wa-card: #ffffff;
+}
+
+[data-theme='luxury'] {
+    --wa-bg: #09090b;
+    --wa-header: #18181b;
+    --wa-sidebar: #09090b;
+    --wa-rail: #18181b;
+    --wa-border: #27272a;
+    --wa-text: #fef08a;
+    --wa-muted: #a1a1aa;
+    --wa-hover: #27272a;
+    --wa-active: #3f3f46;
+    --wa-input: #18181b;
+    --wa-accent: #eab308;
+    --wa-accent-hover: #ca8a04;
+    --wa-bubble-out: #362908;
+    --wa-bubble-out-text: #fef08a;
+    --wa-bubble-in: #18181b;
+    --wa-bubble-in-text: #f4f4f5;
+    --wa-chat-empty: #040405;
+    --wa-card: #18181b;
+}
+
+[data-theme='synthwave'] {
+    --wa-bg: #1a103c;
+    --wa-header: #24144e;
+    --wa-sidebar: #1a103c;
+    --wa-rail: #24144e;
+    --wa-border: #3b2075;
+    --wa-text: #fdf2f8;
+    --wa-muted: #c084fc;
+    --wa-hover: #2d185e;
+    --wa-active: #3c207d;
+    --wa-input: #24144e;
+    --wa-accent: #e779c1;
+    --wa-accent-hover: #db2777;
+    --wa-bubble-out: #581c87;
+    --wa-bubble-out-text: #fdf2f8;
+    --wa-bubble-in: #24144e;
+    --wa-bubble-in-text: #fdf2f8;
+    --wa-chat-empty: #12092e;
+    --wa-card: #24144e;
+}
+
+[data-theme='cyberpunk'] {
+    --wa-bg: #ffee00;
+    --wa-header: #facc15;
+    --wa-sidebar: #ffee00;
+    --wa-rail: #facc15;
+    --wa-border: #eab308;
+    --wa-text: #000000;
+    --wa-muted: #713f12;
+    --wa-hover: #fef08a;
+    --wa-active: #fde047;
+    --wa-input: #fef08a;
+    --wa-accent: #ff0055;
+    --wa-accent-hover: #e11d48;
+    --wa-bubble-out: #ff0055;
+    --wa-bubble-out-text: #ffffff;
+    --wa-bubble-in: #ffffff;
+    --wa-bubble-in-text: #000000;
+    --wa-chat-empty: #fef9c3;
+    --wa-card: #ffffff;
+}
+
+[data-theme='retro'] {
+    --wa-bg: #ece3ca;
+    --wa-header: #dfd5b8;
+    --wa-sidebar: #ece3ca;
+    --wa-rail: #dfd5b8;
+    --wa-border: #c8bca0;
+    --wa-text: #282420;
+    --wa-muted: #7d7259;
+    --wa-hover: #e5dac1;
+    --wa-active: #d6cab0;
+    --wa-input: #dfd5b8;
+    --wa-accent: #ef9995;
+    --wa-accent-hover: #e27d78;
+    --wa-bubble-out: #a4cbb4;
+    --wa-bubble-out-text: #1b3325;
+    --wa-bubble-in: #ffffff;
+    --wa-bubble-in-text: #282420;
+    --wa-chat-empty: #f5eedb;
+    --wa-card: #ffffff;
+}
+
+[data-theme='forest'] {
+    --wa-bg: #171212;
+    --wa-header: #1f1919;
+    --wa-sidebar: #171212;
+    --wa-rail: #1f1919;
+    --wa-border: #2e2626;
+    --wa-text: #e6fced;
+    --wa-muted: #86a992;
+    --wa-hover: #292020;
+    --wa-active: #3b2e2e;
+    --wa-input: #1f1919;
+    --wa-accent: #1eb854;
+    --wa-accent-hover: #169b43;
+    --wa-bubble-out: #14532d;
+    --wa-bubble-out-text: #e6fced;
+    --wa-bubble-in: #1f1919;
+    --wa-bubble-in-text: #e6fced;
+    --wa-chat-empty: #0e0a0a;
+    --wa-card: #1f1919;
+}
+
+[data-theme='aqua'] {
+    --wa-bg: #1e3a8a;
+    --wa-header: #1d4ed8;
+    --wa-sidebar: #1e3a8a;
+    --wa-rail: #1d4ed8;
+    --wa-border: #2563eb;
+    --wa-text: #eff6ff;
+    --wa-muted: #bfdbfe;
+    --wa-hover: #2563eb;
+    --wa-active: #3b82f6;
+    --wa-input: #1d4ed8;
+    --wa-accent: #09ecf3;
+    --wa-accent-hover: #06b6d4;
+    --wa-bubble-out: #0284c7;
+    --wa-bubble-out-text: #ffffff;
+    --wa-bubble-in: #172554;
+    --wa-bubble-in-text: #eff6ff;
+    --wa-chat-empty: #172554;
+    --wa-card: #1e3a8a;
+}
+
 /* ==================== PROJECT-WIDE THEME APPLICATION ==================== */
 /* Dynamically maps all layout backgrounds, sidebars, rails, borders and text */
-.bg-\[\#111b21\] { background-color: var(--wa-bg) !important; }
-.bg-\[\#202c33\] { background-color: var(--wa-header) !important; }
-.bg-\[\#0b141a\] { background-color: var(--wa-chat-empty) !important; }
-.bg-\[\#2a3942\] { background-color: var(--wa-hover) !important; }
-.bg-\[\#222e35\]\/20 { background-color: transparent !important; }
-.border-\[\#222e35\] { border-color: var(--wa-border) !important; }
-.border-\[\#2a3942\] { border-color: var(--wa-border) !important; }
-.border-\[\#222e35\]\/60 { border-color: var(--wa-border) !important; }
-.border-\[\#222e35\]\/50 { border-color: var(--wa-border) !important; }
-.border-\[\#222e35\]\/40 { border-color: var(--wa-border) !important; }
-.text-\[\#e9edef\] { color: var(--wa-text) !important; }
-.text-\[\#8696a0\] { color: var(--wa-muted) !important; }
-.text-\[\#aebac1\] { color: var(--wa-muted) !important; }
-.text-\[\#d1d7db\] { color: var(--wa-text) !important; }
+.bg-\[\#111b21\],
+.bg-\[\#12151E\],
+.bg-\[\#0E121A\] {
+    background-color: var(--wa-bg) !important;
+}
+
+.bg-\[\#202c33\],
+.bg-\[\#161b22\] {
+    background-color: var(--wa-header) !important;
+}
+
+.bg-\[\#0b141a\] {
+    background-color: var(--wa-chat-empty) !important;
+}
+
+.bg-\[\#2a3942\] {
+    background-color: var(--wa-hover) !important;
+}
+
+.bg-\[\#222e35\]\/20 {
+    background-color: transparent !important;
+}
+
+.border-\[\#222e35\],
+.border-\[\#2a3942\],
+.border-white\/5,
+.border-white\/10 {
+    border-color: var(--wa-border) !important;
+}
+
+.border-\[\#222e35\]\/60,
+.border-\[\#222e35\]\/50,
+.border-\[\#222e35\]\/40 {
+    border-color: var(--wa-border) !important;
+}
+
+.text-\[\#e9edef\],
+.text-\[\#f5f5f5\],
+.text-\[\#d1d7db\] {
+    color: var(--wa-text) !important;
+}
+
+.text-\[\#8696a0\],
+.text-\[\#aebac1\],
+.text-\[\#9CA3AF\] {
+    color: var(--wa-muted) !important;
+}
 
 /* Interactive hover styles */
 .hover\:bg-\[\#202c33\]:hover { background-color: var(--wa-hover) !important; }
