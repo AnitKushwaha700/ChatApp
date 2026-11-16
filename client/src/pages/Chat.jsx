@@ -16,7 +16,6 @@ import NewChatDrawer from "../features/chat/NewChatDrawer";
 import NewGroupDrawer from "../features/chat/NewGroupDrawer";
 import GroupInfoDrawer from "../features/chat/GroupInfoDrawer";
 import ProfileSettingsDrawer from "../features/chat/ProfileSettingsDrawer";
-import ThemeModal from "../features/chat/ThemeModal";
 import CallModal from "../features/chat/CallModal";
 import { applyTheme, getSavedTheme } from "../lib/theme";
 
@@ -40,15 +39,13 @@ const Chat = () => {
   const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
   const [isProfileSettingsOpen, setIsProfileSettingsOpen] = useState(false);
   const [profileSettingsTab, setProfileSettingsTab] = useState("settings");
-  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
   // Statuses state
   const [statuses, setStatuses] = useState([]);
 
-  // Call states
-  const [isCalling, setIsCalling] = useState(false);
-  const [incomingCall, setIncomingCall] = useState(false);
+  // Call states: "idle" | "calling" | "incoming" | "active"
+  const [callState, setCallState] = useState("idle");
   const [callData, setCallData] = useState(null);
 
   const fetchMe = useCallback(async () => {
@@ -106,7 +103,6 @@ const Chat = () => {
         if (isNewChatOpen) setIsNewChatOpen(false);
         if (isNewGroupDrawerOpen) setIsNewGroupDrawerOpen(false);
         if (isGroupInfoOpen) setIsGroupInfoOpen(false);
-        if (isThemeModalOpen) setIsThemeModalOpen(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -117,7 +113,6 @@ const Chat = () => {
     isNewChatOpen,
     isNewGroupDrawerOpen,
     isGroupInfoOpen,
-    isThemeModalOpen,
   ]);
 
   // Socket connection & room setup
@@ -146,12 +141,15 @@ const Chat = () => {
       }
     };
     const handleIncomingCall = (data) => {
-      setIncomingCall(true);
       setCallData({
-        from: data.from,
-        name: data.name || "User",
-        isVideo: data.isVideo,
+        from: data.from?.toString(),
+        to: user?._id?.toString(),
+        name: data.name || "Contact",
+        avatar: data.avatar || "",
+        isVideo: Boolean(data.isVideo),
+        isCaller: false,
       });
+      setCallState("incoming");
     };
     const handleNewStatus = () => {
       fetchStatuses();
@@ -191,37 +189,70 @@ const Chat = () => {
   };
 
   const initiateCall = (friend, isVideo) => {
-    setIsCalling(true);
+    if (!friend) return;
+    let targetUser = friend;
+    if (friend.users && Array.isArray(friend.users)) {
+      targetUser =
+        friend.users.find(
+          (u) => (u._id || u).toString() !== user?._id?.toString()
+        ) || friend;
+    }
+
+    const targetId =
+      targetUser?._id ||
+      (typeof targetUser === "string" ? targetUser : null);
+    if (!targetId) return;
+
     setCallData({
-      to: friend._id,
-      name: friend.fullName || friend.email,
-      isVideo,
+      to: targetId.toString(),
+      from: user?._id?.toString(),
+      name:
+        targetUser?.fullName ||
+        targetUser?.name ||
+        targetUser?.email ||
+        "Contact",
+      avatar: targetUser?.profilePic || "",
+      isVideo: Boolean(isVideo),
+      isCaller: true,
     });
+    setCallState("calling");
   };
 
   const handleRailTabChange = (tabId) => {
-    if (tabId === activeRailTab && (tabId === "status" || tabId === "calls")) {
+    // If clicking the currently active drawer tab, toggle back to chats
+    if (tabId === activeRailTab && tabId !== "chats") {
       setActiveRailTab("chats");
       setIsStatusDrawerOpen(false);
       setIsCallsDrawerOpen(false);
+      setIsProfileSettingsOpen(false);
       return;
     }
+
     setActiveRailTab(tabId);
+
     if (tabId === "status") {
       setIsStatusDrawerOpen(true);
       setIsCallsDrawerOpen(false);
+      setIsProfileSettingsOpen(false);
     } else if (tabId === "calls") {
       setIsCallsDrawerOpen(true);
       setIsStatusDrawerOpen(false);
-    } else if (tabId === "profile") {
-      setProfileSettingsTab("profile");
-      setIsProfileSettingsOpen(true);
+      setIsProfileSettingsOpen(false);
     } else if (tabId === "settings") {
       setProfileSettingsTab("settings");
       setIsProfileSettingsOpen(true);
-    } else {
       setIsStatusDrawerOpen(false);
       setIsCallsDrawerOpen(false);
+    } else if (tabId === "profile") {
+      setProfileSettingsTab("profile");
+      setIsProfileSettingsOpen(true);
+      setIsStatusDrawerOpen(false);
+      setIsCallsDrawerOpen(false);
+    } else {
+      // "chats" or default
+      setIsStatusDrawerOpen(false);
+      setIsCallsDrawerOpen(false);
+      setIsProfileSettingsOpen(false);
     }
   };
 
@@ -229,31 +260,22 @@ const Chat = () => {
 
   return (
     <div className="flex h-dvh w-screen bg-[#111b21] text-[#e9edef] overflow-hidden select-none font-sans">
-      {/* 1. WhatsApp Left Navigation Rail (60px) */}
+      {/* 1. WhatsApp Left Navigation Rail (Desktop) / Bottom Nav Bar (Mobile) */}
       <NavigationRail
         activeTab={activeRailTab}
         onTabChange={handleRailTabChange}
-        setActiveTab={handleRailTabChange}
         hasUnviewedStatus={statuses.length > 0}
         user={user}
-        onOpenSettings={() => {
-          setActiveRailTab("settings");
-          setProfileSettingsTab("settings");
-          setIsProfileSettingsOpen(true);
-        }}
-        onOpenProfile={() => {
-          setActiveRailTab("profile");
-          setProfileSettingsTab("profile");
-          setIsProfileSettingsOpen(true);
-        }}
-        onOpenThemeModal={() => setIsThemeModalOpen(true)}
+        selectedFriend={selectedFriend}
+        onOpenSettings={() => handleRailTabChange("settings")}
+        onOpenProfile={() => handleRailTabChange("profile")}
       />
 
-      {/* 2. Chat Sidebar (380-420px) */}
+      {/* 2. Chat Sidebar (380-420px on desktop, 100% on mobile) */}
       <div
         className={`${
           selectedFriend ? "hidden md:flex" : "flex"
-        } h-full shrink-0 border-r border-[#222e35]`}
+        } w-full md:w-auto h-full shrink-0 border-r border-[#222e35]`}
       >
         <ChatSidebar
           selectedChat={selectedFriend}
@@ -264,12 +286,7 @@ const Chat = () => {
           onOpenNewGroup={() => setIsNewGroupDrawerOpen(true)}
           onOpenStatusViewer={(st) => setActiveStatusViewerItem(st)}
           statuses={statuses}
-          onOpenSettings={() => {
-            setActiveRailTab("settings");
-            setProfileSettingsTab("settings");
-            setIsProfileSettingsOpen(true);
-          }}
-          onOpenThemeModal={() => setIsThemeModalOpen(true)}
+          onOpenSettings={() => handleRailTabChange("settings")}
           onLogout={() => setIsLogoutModalOpen(true)}
         />
       </div>
@@ -278,7 +295,7 @@ const Chat = () => {
       <div
         className={`${
           !selectedFriend ? "hidden md:flex" : "flex"
-        } flex-1 flex-col h-full bg-[#0b141a] relative`}
+        } w-full md:flex-1 flex-col h-full bg-[#0b141a] relative`}
       >
         {selectedFriend ? (
           <Chatting
@@ -399,13 +416,6 @@ const Chat = () => {
         }}
         initialTab={profileSettingsTab}
         onLogout={() => setIsLogoutModalOpen(true)}
-        onOpenThemeModal={() => setIsThemeModalOpen(true)}
-      />
-
-      {/* WhatsApp Theme Selection Modal */}
-      <ThemeModal
-        isOpen={isThemeModalOpen}
-        onClose={() => setIsThemeModalOpen(false)}
       />
 
       {/* Logout Confirmation Modal */}
@@ -438,20 +448,17 @@ const Chat = () => {
 
       {/* Audio & Video Call Modal */}
       <CallModal
-        isCalling={isCalling}
-        incomingCall={incomingCall}
+        callState={callState}
         callData={callData}
         onEndCall={() => {
-          setIsCalling(false);
-          setIncomingCall(false);
+          setCallState("idle");
           setCallData(null);
         }}
         onAcceptCall={() => {
-          setIncomingCall(false);
-          setIsCalling(true);
+          setCallState("active");
         }}
         onRejectCall={() => {
-          setIncomingCall(false);
+          setCallState("idle");
           setCallData(null);
         }}
       />

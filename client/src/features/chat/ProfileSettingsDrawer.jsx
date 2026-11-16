@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import toast from "react-hot-toast";
 import {
   ArrowLeft,
   Camera,
@@ -20,6 +21,7 @@ import {
   X,
   Search,
   Key,
+  KeyRound,
   ShieldCheck,
   Keyboard,
   MessageSquare,
@@ -30,11 +32,14 @@ import {
   Trash2,
   Archive,
   Eye,
+  EyeOff,
   Sliders,
 } from "lucide-react";
 import api from "../../lib/api";
 import { useAuth } from "../auth/AuthContext";
 import { THEME_LIST, applyTheme, getSavedTheme } from "../../lib/theme";
+import OtpInput from "../../components/ui/OtpInput";
+import PasswordStrength from "../../components/ui/PasswordStrength";
 
 const ABOUT_PRESETS = [
   "Available",
@@ -113,6 +118,7 @@ const ProfileSettingsDrawer = ({
 
   // Settings & Preferences States
   const [currentTheme, setCurrentTheme] = useState(() => getSavedTheme());
+  const [themeCategory, setThemeCategory] = useState("all");
   const [selectedWallpaper, setSelectedWallpaper] = useState(user?.wallpaper || "default");
   const [includeDoodles, setIncludeDoodles] = useState(true);
   const [wallpaperDim, setWallpaperDim] = useState(20);
@@ -143,6 +149,84 @@ const ProfileSettingsDrawer = ({
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackSent, setFeedbackSent] = useState(false);
   const [confirmModal, setConfirmModal] = useState(null); // { title, message, onConfirm, isDanger }
+
+  // Password Reset / Forgot Password States
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordResetStep, setPasswordResetStep] = useState("email"); // "email" | "otp"
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetOtp, setResetOtp] = useState("");
+  const [resetNewPassword, setResetNewPassword] = useState("");
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetCooldown, setResetCooldown] = useState(0);
+  const [isResetting, setIsResetting] = useState(false);
+
+  // 60-second cooldown timer for drawer password reset
+  useEffect(() => {
+    if (resetCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResetCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resetCooldown]);
+
+  const handleOpenPasswordReset = () => {
+    setResetEmail(user?.email || "");
+    setPasswordResetStep("email");
+    setResetOtp("");
+    setResetNewPassword("");
+    setShowResetPassword(false);
+    setIsPasswordModalOpen(true);
+  };
+
+  const handleSendResetOtp = async (e) => {
+    e?.preventDefault();
+    if (resetCooldown > 0) return;
+    const targetEmail = resetEmail.trim() || user?.email;
+    if (!targetEmail) {
+      toast.error("Email is required");
+      return;
+    }
+    try {
+      setIsResetting(true);
+      const res = await api.post("/auth/forgot-password", { email: targetEmail });
+      toast.success(res.data?.message || "OTP sent to your email!");
+      setResetCooldown(60);
+      if (res.data?.devOtp) {
+        setResetOtp(res.data.devOtp);
+      }
+      setPasswordResetStep("otp");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to send OTP code");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handleConfirmPasswordReset = async (e) => {
+    e?.preventDefault();
+    const targetEmail = resetEmail.trim() || user?.email;
+    if (!targetEmail || !resetOtp.trim() || !resetNewPassword) {
+      toast.error("Please fill in OTP and new password");
+      return;
+    }
+    try {
+      setIsResetting(true);
+      const res = await api.post("/auth/reset-password", {
+        email: targetEmail,
+        otp: resetOtp.trim(),
+        newPassword: resetNewPassword,
+      });
+      toast.success(res.data?.message || "Password changed successfully!");
+      setIsPasswordModalOpen(false);
+      setPasswordResetStep("email");
+      setResetOtp("");
+      setResetNewPassword("");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to reset password");
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   // Sync user state
   useEffect(() => {
@@ -359,9 +443,9 @@ const ProfileSettingsDrawer = ({
   };
 
   return (
-    <div className="fixed inset-y-0 left-0 sm:left-[60px] z-40 w-full sm:w-[420px] bg-[#111b21] dark:bg-[#111b21] text-[#e9edef] border-r border-[#222e35] shadow-2xl flex flex-col animate-in slide-in-from-left duration-200 select-none">
+    <div className="fixed inset-y-0 left-0 md:left-[60px] z-40 w-full md:w-[380px] lg:w-[420px] bg-[#111b21] dark:bg-[#111b21] text-[#e9edef] border-r border-[#222e35] shadow-2xl flex flex-col animate-in slide-in-from-left duration-200 select-none">
       {/* 1. TOP HEADER */}
-      <div className="h-[108px] bg-[#202c33] dark:bg-[#202c33] flex items-end px-5 pb-4 gap-6 border-b border-[#222e35] shrink-0">
+      <div className="h-[calc(60px+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-[#202c33] dark:bg-[#202c33] flex items-center px-4 gap-4 border-b border-[#222e35] shrink-0">
         <button
           onClick={handleBack}
           className="p-1 rounded-full hover:bg-[#374248] text-[#aebac1] hover:text-[#e9edef] transition-colors cursor-pointer"
@@ -666,6 +750,27 @@ const ProfileSettingsDrawer = ({
               />
             </div>
 
+            {/* Password & Security / Reset Password */}
+            <div className="px-6 py-4">
+              <div className="flex items-center gap-2">
+                <p className="text-[15px] font-normal text-[#e9edef]">Password & Security</p>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#00a884]/20 text-[#00a884] font-medium">
+                  Protected
+                </span>
+              </div>
+              <p className="text-xs text-[#8696a0] mt-1 leading-relaxed">
+                Change your account password or reset it with a secure 6-digit OTP code sent to your registered email ({user?.email}).
+              </p>
+              <button
+                type="button"
+                onClick={handleOpenPasswordReset}
+                className="mt-3 px-4 py-2 rounded-xl bg-[#202c33] hover:bg-[#2a3942] text-sm text-[#00a884] hover:text-[#00c897] font-medium transition-colors cursor-pointer flex items-center gap-2 border border-[#00a884]/30"
+              >
+                <KeyRound className="w-4 h-4" />
+                <span>Change / Forgot Password</span>
+              </button>
+            </div>
+
             {/* Request Account Info */}
             <div className="px-6 py-4">
               <p className="text-[15px] font-normal text-[#e9edef]">Request account info</p>
@@ -964,87 +1069,80 @@ const ProfileSettingsDrawer = ({
 
         {/* ==================== VIEW: THEME ==================== */}
         {currentView === "theme" && (
-          <div className="p-6 flex flex-col gap-6">
-            <div>
-              <span className="text-xs font-semibold text-[#8696a0] uppercase tracking-wider block mb-3">
-                General
-              </span>
-              <div className="space-y-2">
-                {[
-                  { id: "dark", name: "Dark", desc: "Classic WhatsApp Web dark mode", icon: Moon },
-                  { id: "light", name: "Light", desc: "Classic WhatsApp Web light mode", icon: Sun },
-                  { id: "system", name: "System default", desc: "Matches computer system theme", icon: Monitor },
-                ].map((th) => {
-                  const Icon = th.icon;
-                  const isSelected = currentTheme === th.id;
-                  return (
-                    <div
-                      key={th.id}
-                      onClick={() => handleSelectTheme(th.id)}
-                      className={`flex items-center justify-between p-3.5 rounded-xl cursor-pointer transition-all border ${
-                        isSelected
-                          ? "bg-[#202c33] border-[#00a884] text-white"
-                          : "border-[#2a3942]/60 hover:bg-[#202c33]/50 text-[#d1d7db]"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3.5">
-                        <Icon className="w-5 h-5 text-[#00a884]" />
-                        <div>
-                          <p className="text-sm font-medium">{th.name}</p>
-                          <p className="text-xs text-[#8696a0]">{th.desc}</p>
-                        </div>
-                      </div>
+          <div className="p-4 sm:p-6 flex flex-col gap-4">
+            {/* Category Filter Pills */}
+            <div className="flex items-center gap-2">
+              {[
+                { id: "all", label: `All (${THEME_LIST.length})` },
+                { id: "dark", label: "🌙 Dark" },
+                { id: "light", label: "☀️ Light" },
+              ].map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setThemeCategory(cat.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                    themeCategory === cat.id
+                      ? "bg-primary text-primary-content font-bold shadow-xs"
+                      : "bg-base-200 hover:bg-base-300 text-base-content/70 hover:text-base-content"
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+
+            {/* FlyonUI Themes List with 4-Stripe Color Indicators */}
+            <div className="flex flex-col gap-2 max-h-[calc(100vh-280px)] overflow-y-auto custom-scrollbar pr-1 pb-4">
+              {THEME_LIST.filter((th) => {
+                if (themeCategory === "dark") return th.type === "dark";
+                if (themeCategory === "light") return th.type === "light";
+                return true;
+              }).map((th) => {
+                const isSelected = currentTheme === th.id;
+                return (
+                  <button
+                    key={th.id}
+                    type="button"
+                    onClick={() => handleSelectTheme(th.id)}
+                    style={{
+                      backgroundColor: th.bg,
+                      color: th.text,
+                      borderColor: isSelected ? "var(--color-primary, #7c3aed)" : th.border,
+                    }}
+                    className={`w-full text-left px-3.5 py-3 rounded-2xl flex items-center justify-between border transition-all duration-150 cursor-pointer font-medium shadow-xs hover:scale-[1.01] active:scale-[0.99] ${
+                      isSelected
+                        ? "ring-2 ring-primary ring-offset-2 ring-offset-base-100 font-bold shadow-md"
+                        : "hover:border-base-content/30 opacity-95 hover:opacity-100"
+                    } ${th.fontClass || ""}`}
+                  >
+                    {/* Theme Label & Checkmark */}
+                    <div className="flex items-center gap-3">
                       <div
                         className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
                           isSelected
-                            ? "border-[#00a884] bg-[#00a884]"
-                            : "border-[#8696a0] bg-transparent"
+                            ? "border-primary bg-primary text-primary-content"
+                            : "border-base-content/30 bg-transparent"
                         }`}
                       >
-                        {isSelected && <Check className="w-3.5 h-3.5 text-black stroke-[3]" />}
+                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                       </div>
+                      <span className="text-sm font-semibold">{th.name}</span>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
 
-            <div className="pt-2 border-t border-[#222e35]/60">
-              <span className="text-xs font-semibold text-[#8696a0] uppercase tracking-wider block mb-3">
-                Custom WhatsApp Palettes
-              </span>
-              <div className="grid grid-cols-2 gap-3">
-                {THEME_LIST.slice(3).map((th) => {
-                  const isSelected = currentTheme === th.id;
-                  return (
-                    <div
-                      key={th.id}
-                      onClick={() => handleSelectTheme(th.id)}
-                      className={`p-3 rounded-xl border flex flex-col justify-between h-24 cursor-pointer transition-all ${
-                        isSelected
-                          ? "border-[#00a884] bg-[#202c33] ring-1 ring-[#00a884]"
-                          : "border-[#2a3942] bg-[#111b21] hover:border-[#8696a0]/50"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
+                    {/* FlyonUI 4-Stripe Color Palette Preview */}
+                    <div className="flex items-center gap-1.5 shrink-0 ml-3">
+                      {th.colors.map((color, idx) => (
                         <span
-                          className="w-3.5 h-3.5 rounded-full shadow-xs"
-                          style={{ backgroundColor: th.accent }}
+                          key={idx}
+                          className="w-1.5 h-4.5 rounded-xs shadow-2xs inline-block"
+                          style={{ backgroundColor: color }}
                         />
-                        {isSelected && (
-                          <div className="w-4 h-4 rounded-full bg-[#00a884] flex items-center justify-center text-black">
-                            <Check className="w-3 h-3 stroke-[3]" />
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-[#e9edef]">{th.name}</p>
-                        <p className="text-[11px] text-[#8696a0] line-clamp-1">{th.desc}</p>
-                      </div>
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -1366,6 +1464,151 @@ const ProfileSettingsDrawer = ({
                 Continue
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== FORGOT / RESET PASSWORD MODAL ==================== */}
+      {isPasswordModalOpen && (
+        <div
+          className="fixed inset-0 z-100 flex items-center justify-center bg-black/75 px-4 backdrop-blur-xs"
+          onClick={() => setIsPasswordModalOpen(false)}
+        >
+          <div
+            className="bg-[#202c33] p-6 rounded-2xl shadow-2xl w-full max-w-md flex flex-col gap-4 border border-[#2a3942] animate-in fade-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-[#2a3942]">
+              <div className="flex items-center gap-2 text-[#00a884]">
+                <KeyRound className="w-5 h-5" />
+                <h3 className="font-semibold text-lg text-[#e9edef]">
+                  {passwordResetStep === "email" ? "Forgot / Reset Password" : "Enter Verification OTP"}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsPasswordModalOpen(false)}
+                className="p-1 rounded-full text-[#8696a0] hover:text-[#e9edef] hover:bg-[#2a3942] cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {passwordResetStep === "email" ? (
+              <form onSubmit={handleSendResetOtp} className="space-y-4">
+                <p className="text-xs text-[#8696a0] leading-relaxed">
+                  Enter your account email to receive a 6-digit one-time verification code.
+                </p>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-[#8696a0]">Email Address</label>
+                  <input
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="Enter account email"
+                    required
+                    disabled={isResetting}
+                    className="w-full bg-[#111b21] border border-[#2a3942] focus:border-[#00a884] rounded-xl px-3.5 py-2.5 text-sm text-[#e9edef] outline-none transition-colors"
+                  />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsPasswordModalOpen(false)}
+                    className="flex-1 py-2 rounded-xl text-sm font-medium hover:bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef] transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isResetting}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-[#00a884] hover:bg-[#06cf9c] text-[#111b21] transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isResetting ? "Sending OTP..." : "Send OTP"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleConfirmPasswordReset} className="space-y-4">
+                <p className="text-xs text-[#8696a0] leading-relaxed">
+                  Enter the 6-digit verification code sent to <span className="text-[#e9edef] font-semibold">{resetEmail || user?.email}</span> and your new password.
+                </p>
+                
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[#8696a0] uppercase tracking-wider flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-[#00a884]" />
+                    <span>6-Digit Verification Code</span>
+                  </label>
+                  <OtpInput
+                    value={resetOtp}
+                    onChange={setResetOtp}
+                    disabled={isResetting}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-[#8696a0] flex items-center justify-between">
+                    <span>New Password</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowResetPassword(!showResetPassword)}
+                      className="text-xs text-[#8696a0] hover:text-[#e9edef] flex items-center gap-1 cursor-pointer"
+                    >
+                      {showResetPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                      <span>{showResetPassword ? "Hide" : "Show"}</span>
+                    </button>
+                  </label>
+                  <input
+                    type={showResetPassword ? "text" : "password"}
+                    value={resetNewPassword}
+                    onChange={(e) => setResetNewPassword(e.target.value)}
+                    placeholder="Enter new strong password"
+                    required
+                    disabled={isResetting}
+                    className="w-full bg-[#111b21] border border-[#2a3942] focus:border-[#00a884] rounded-xl px-3.5 py-2.5 text-sm text-[#e9edef] outline-none transition-colors"
+                  />
+                  <PasswordStrength password={resetNewPassword} />
+                </div>
+
+                <div className="flex justify-between items-center text-xs pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setPasswordResetStep("email")}
+                    className="text-[#8696a0] hover:text-[#e9edef] cursor-pointer"
+                  >
+                    Change email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSendResetOtp}
+                    disabled={isResetting || resetCooldown > 0}
+                    className={`font-semibold cursor-pointer ${
+                      resetCooldown > 0
+                        ? "text-[#8696a0]/50 cursor-not-allowed"
+                        : "text-[#00a884] hover:underline"
+                    }`}
+                  >
+                    {resetCooldown > 0 ? `Resend in ${resetCooldown}s` : "Resend Code"}
+                  </button>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsPasswordModalOpen(false)}
+                    className="flex-1 py-2 rounded-xl text-sm font-medium hover:bg-[#2a3942] text-[#8696a0] hover:text-[#e9edef] transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isResetting || resetOtp.length < 6 || resetNewPassword.length < 6}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-[#00a884] hover:bg-[#06cf9c] text-[#111b21] transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isResetting ? "Updating..." : "Update Password"}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

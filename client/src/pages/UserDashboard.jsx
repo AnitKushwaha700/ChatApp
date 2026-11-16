@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../features/auth/AuthContext";
+import { useModal } from "../context/ModalContext";
 import api from "../lib/api";
 import { motion } from "motion/react";
-import { User, Mail, Phone, Calendar, Edit3, X, Save, Palette, Check } from "lucide-react";
+import { User, Mail, Phone, Calendar, Edit3, X, Save, Palette, Check, Key } from "lucide-react";
 import { applyTheme, THEME_LIST, getSavedTheme } from "../lib/theme";
 
 const UserDashboard = () => {
   const { user, isLogin, setUser } = useAuth();
+  const { openForgotPassword } = useModal();
 
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -210,6 +212,20 @@ const UserDashboard = () => {
                       </div>
                     </div>
                   )}
+                </div>
+
+                <div className="pt-4 flex items-center justify-between border-t border-base-content/10">
+                  <div className="flex items-center gap-2 text-base-content/70">
+                    <Key className="w-4 h-4 text-primary" />
+                    <span className="text-sm">Password & Security</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={openForgotPassword}
+                    className="btn btn-sm btn-outline btn-primary rounded-xl"
+                  >
+                    Reset Password
+                  </button>
                 </div>
               </motion.div>
             ) : (

@@ -149,9 +149,9 @@ const StatusDrawer = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-y-0 left-0 sm:left-[60px] z-40 w-full sm:w-[420px] bg-[#111b21] border-r border-[#222e35] shadow-2xl flex flex-col h-full animate-in slide-in-from-left duration-200 text-[#e9edef]">
+    <div className="fixed inset-y-0 left-0 md:left-[60px] z-40 w-full md:w-[380px] lg:w-[420px] pb-20 md:pb-0 bg-[#111b21] border-r border-[#222e35] shadow-2xl flex flex-col h-full animate-in slide-in-from-left duration-200 text-[#e9edef]">
       {/* Top Header */}
-      <div className="h-[60px] bg-[#202c33] px-4 flex items-center justify-between border-b border-[#222e35] shrink-0">
+      <div className="h-[calc(60px+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-[#202c33] px-4 flex items-center justify-between border-b border-[#222e35] shrink-0">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -161,10 +161,13 @@ const StatusDrawer = ({
           >
             <ArrowLeft size={20} />
           </button>
-          <h2 className="text-[#e9edef] font-semibold text-lg">Status</h2>
+          <h2 className="text-[#e9edef] font-semibold text-lg">
+            <span className="md:hidden">Updates</span>
+            <span className="hidden md:inline">Status</span>
+          </h2>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="hidden md:flex items-center gap-1">
           <button
             type="button"
             onClick={() => setIsCreatingText(true)}
@@ -239,32 +242,14 @@ const StatusDrawer = ({
             </div>
           </div>
 
-          {/* Action buttons to create status */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="p-2 rounded-full hover:bg-base-300 text-base-content/70 hover:text-base-content transition-colors cursor-pointer border-none bg-transparent"
-              title="Add photo or video"
-            >
-              <Camera size={18} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsCreatingText(true)}
-              className="p-2 rounded-full hover:bg-base-300 text-base-content/70 hover:text-base-content transition-colors cursor-pointer border-none bg-transparent"
-              title="Add text status"
-            >
-              <Edit3 size={18} />
-            </button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileSelect}
-              accept="image/*,video/*"
-              className="hidden"
-            />
-          </div>
+          {/* Hidden file input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            accept="image/*,video/*"
+            className="hidden"
+          />
         </div>
 
         {/* Recent Updates */}
@@ -359,6 +344,26 @@ const StatusDrawer = ({
               No recent updates from your contacts.
             </div>
           )}
+      </div>
+
+      {/* Mobile Floating Action Buttons (Pencil & Camera) */}
+      <div className="md:hidden fixed bottom-20 right-5 flex flex-col items-center gap-3 z-40">
+        <button
+          type="button"
+          onClick={() => setIsCreatingText(true)}
+          className="w-11 h-11 rounded-full bg-[#202c33] text-[#e9edef] flex items-center justify-center shadow-xl border border-[#2a3942] active:scale-95 transition-transform cursor-pointer"
+          title="Text status"
+        >
+          <Edit3 size={18} />
+        </button>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="w-14 h-14 rounded-2xl bg-[#00a884] hover:bg-[#008f72] text-white flex items-center justify-center shadow-2xl active:scale-95 transition-transform cursor-pointer border-none"
+          title="Camera status"
+        >
+          <Camera size={24} />
+        </button>
       </div>
 
       {/* Create Text Status Full-Screen Overlay (matches media_1794640762822_19ab4785.png) */}
