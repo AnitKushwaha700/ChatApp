@@ -7,7 +7,7 @@ const router = express.Router();
 
 const otpLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 mins
-  max: 3, // 3 requests per IP
+  max: 10, // 10 requests per IP
   message: { success: false, message: "Too many OTP requests. Please try again later." }
 });
 

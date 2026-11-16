@@ -31,7 +31,7 @@ const allowedOrigins = [
 // Middlewares
 app.use(helmet({
   crossOriginResourcePolicy: false,
-  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }
+  crossOriginOpenerPolicy: false,
 }));
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
