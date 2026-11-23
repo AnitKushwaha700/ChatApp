@@ -136,22 +136,6 @@ const InstallAppCard = ({ className = "" }) => {
             <span>Install</span>
           </button>
         </div>
-
-        {/* Feature Highlights (Visible on tablets and desktop only, keeping mobile minimal & clean) */}
-        <div className="hidden sm:grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-base-content/10 text-left">
-          <div className="flex items-center gap-1.5 text-xs text-base-content/80">
-            <Zap size={13} className="text-[#04BC66] shrink-0" />
-            <span className="truncate">Instant Launch</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs text-base-content/80">
-            <Bell size={13} className="text-[#04BC66] shrink-0" />
-            <span className="truncate">Notifications</span>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs text-base-content/80">
-            <ShieldCheck size={13} className="text-[#04BC66] shrink-0" />
-            <span className="truncate">Under 3 MB</span>
-          </div>
-        </div>
       </div>
 
       {/* iOS / Browser Manual Install Guide Modal */}

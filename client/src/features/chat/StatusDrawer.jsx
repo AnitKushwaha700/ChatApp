@@ -8,23 +8,27 @@ import {
   Image as ImageIcon,
   X,
   Send,
-  ChevronLeft,
-  ChevronRight,
   Type,
+  Palette,
+  Smile,
+  Lock,
 } from "lucide-react";
+import EmojiPicker from "emoji-picker-react";
 import api from "../../lib/api";
 import socketAPI from "../../lib/webSocket";
 
 const BG_COLORS = [
-  "#263238", // Slate / Charcoal (Default in screenshot)
-  "#00a884", // WhatsApp Teal Green
-  "#0288d1", // Vibrant Blue
-  "#7c4dff", // Purple
-  "#ec4899", // Pink / Magenta
-  "#ef4444", // Coral Red
-  "#f59e0b", // Amber Orange
-  "#075e54", // WhatsApp Deep Teal
-  "#1f2937", // Midnight Slate
+  "#005c4b", // WhatsApp signature deep teal (Default)
+  "#008069", // WhatsApp classic emerald
+  "#1f7a8c", // Oceanic teal
+  "#7c4dff", // Vibrant violet
+  "#d946ef", // Fuchsia
+  "#e11d48", // Crimson red
+  "#d97706", // Amber orange
+  "#2563eb", // Royal blue
+  "#263238", // Charcoal slate
+  "#831843", // Burgundy wine
+  "#111b21", // Midnight dark
 ];
 
 const FONT_STYLES = [
@@ -51,13 +55,15 @@ const StatusDrawer = ({
   const [textContent, setTextContent] = useState("");
   const [selectedBg, setSelectedBg] = useState(BG_COLORS[0]);
   const [fontIndex, setFontIndex] = useState(0);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [mediaFile, setMediaFile] = useState(null);
   const [mediaPreview, setMediaPreview] = useState(null);
   const [mediaCaption, setMediaCaption] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fileInputRef = useRef(null);
-  const colorListRef = useRef(null);
+  const textareaRef = useRef(null);
+  const emojiPickerRef = useRef(null);
 
   const getMediaUrl = (url) => {
     if (!url) return "";
@@ -89,6 +95,40 @@ const StatusDrawer = ({
       socketAPI.off("newStatus", handleNewStatus);
     };
   }, [isOpen]);
+
+  // Close emoji picker on click outside
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (
+        showEmojiPicker &&
+        emojiPickerRef.current &&
+        !emojiPickerRef.current.contains(e.target)
+      ) {
+        setShowEmojiPicker(false);
+      }
+    };
+    if (showEmojiPicker) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [showEmojiPicker]);
+
+  const handleCycleColor = () => {
+    const currentIndex = BG_COLORS.indexOf(selectedBg);
+    const nextIndex = (currentIndex + 1) % BG_COLORS.length;
+    setSelectedBg(BG_COLORS[nextIndex]);
+  };
+
+  const handleCycleFont = () => {
+    setFontIndex((prev) => (prev + 1) % FONT_STYLES.length);
+  };
+
+  const handleEmojiClick = (emojiData) => {
+    setTextContent((prev) => prev + emojiData.emoji);
+    textareaRef.current?.focus();
+  };
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
@@ -366,116 +406,139 @@ const StatusDrawer = ({
         </button>
       </div>
 
-      {/* Create Text Status Full-Screen Overlay (matches media_1794640762822_19ab4785.png) */}
+      {/* Create Text Status Full-Screen Overlay (Authentic WhatsApp Layout) */}
       {isCreatingText &&
         createPortal(
           <div
             style={{ backgroundColor: selectedBg }}
-            className="fixed inset-0 z-100 flex flex-col justify-between p-6 sm:p-8 select-none transition-colors duration-300"
+            className="fixed inset-0 z-100 flex flex-col justify-between p-4 sm:p-8 select-none transition-colors duration-300 overflow-hidden"
           >
-            {/* Top Bar: Close button on left, color picker & font switch on right */}
-            <div className="flex items-center justify-between text-white w-full max-w-7xl mx-auto">
+            {/* Top Bar: Authentic WhatsApp controls */}
+            <div className="flex items-center justify-between text-white w-full max-w-4xl mx-auto z-20">
+              {/* Left: Discard / Close button */}
               <button
                 type="button"
                 onClick={() => {
                   setIsCreatingText(false);
                   setTextContent("");
+                  setShowEmojiPicker(false);
                 }}
-                className="p-2.5 rounded-full hover:bg-black/25 text-white/90 hover:text-white transition-colors cursor-pointer border-none bg-transparent"
+                className="w-10 h-10 rounded-full hover:bg-black/20 active:scale-95 text-white flex items-center justify-center transition-all cursor-pointer border-none bg-transparent"
                 title="Discard status"
               >
-                <X size={26} />
+                <X size={26} strokeWidth={2.2} />
               </button>
 
-              {/* Color Swatches and Font controls */}
-              <div className="flex items-center gap-1.5 sm:gap-2 bg-black/25 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-lg">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const currentIndex = BG_COLORS.indexOf(selectedBg);
-                    const prevIndex =
-                      currentIndex <= 0 ? BG_COLORS.length - 1 : currentIndex - 1;
-                    setSelectedBg(BG_COLORS[prevIndex]);
-                  }}
-                  className="p-1 rounded-full hover:bg-white/10 text-white/70 hover:text-white transition-colors cursor-pointer"
-                  title="Previous color"
-                >
-                  <ChevronLeft size={16} />
-                </button>
+              {/* Right: WhatsApp Tools (Color Swatches, Palette Cycle, Font 'T', Emoji) */}
+              <div className="flex items-center gap-2 sm:gap-3 relative">
+                {/* Color Swatch Dots with Palette Cycle Button */}
+                <div className="flex items-center gap-1.5 bg-black/25 backdrop-blur-md px-2.5 py-1.5 rounded-full border border-white/10 shadow-lg">
+                  <div className="flex items-center gap-1.5 overflow-x-auto max-w-[130px] sm:max-w-[210px] py-0.5 no-scrollbar [&::-webkit-scrollbar]:hidden">
+                    {BG_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        style={{ backgroundColor: c }}
+                        onClick={() => setSelectedBg(c)}
+                        className={`w-5 h-5 rounded-full border-2 transition-all cursor-pointer shrink-0 ${
+                          selectedBg === c
+                            ? "border-white scale-120 shadow-md ring-2 ring-white/50"
+                            : "border-white/30 hover:scale-110 opacity-75 hover:opacity-100"
+                        }`}
+                        title="Pick color"
+                      />
+                    ))}
+                  </div>
 
-                <div
-                  ref={colorListRef}
-                  className="flex items-center gap-2 overflow-x-auto max-w-[240px] sm:max-w-[340px] py-1 custom-scrollbar px-1"
-                >
-                  {BG_COLORS.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      style={{ backgroundColor: c }}
-                      onClick={() => setSelectedBg(c)}
-                      className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 cursor-pointer transition-all shrink-0 ${
-                        selectedBg === c
-                          ? "scale-115 border-white ring-2 ring-white/60 shadow-lg"
-                          : "border-white/30 hover:scale-105"
-                      }`}
-                      title={c}
-                    />
-                  ))}
+                  <div className="h-4 w-px bg-white/20 mx-0.5" />
+
+                  {/* Palette button: cycles color directly on click */}
+                  <button
+                    type="button"
+                    onClick={handleCycleColor}
+                    className="w-8 h-8 rounded-full hover:bg-white/15 text-white flex items-center justify-center cursor-pointer transition-transform active:scale-90 border-none bg-transparent"
+                    title="Cycle color"
+                  >
+                    <Palette size={18} />
+                  </button>
                 </div>
 
+                {/* Font Switcher 'T' */}
                 <button
                   type="button"
-                  onClick={() => {
-                    const currentIndex = BG_COLORS.indexOf(selectedBg);
-                    const nextIndex =
-                      currentIndex >= BG_COLORS.length - 1 ? 0 : currentIndex + 1;
-                    setSelectedBg(BG_COLORS[nextIndex]);
-                  }}
-                  className="p-1 rounded-full hover:bg-white/10 text-white/70 hover:text-white transition-colors cursor-pointer"
-                  title="Next color"
+                  onClick={handleCycleFont}
+                  className="w-10 h-10 rounded-full bg-black/25 backdrop-blur-md hover:bg-white/20 active:scale-90 text-white flex items-center justify-center transition-all cursor-pointer border border-white/10 shadow-lg"
+                  title={`Font: ${FONT_STYLES[fontIndex].name} (Tap to change)`}
                 >
-                  <ChevronRight size={16} />
+                  <Type size={20} strokeWidth={2.4} />
                 </button>
 
-                <div className="h-4 w-px bg-white/20 mx-1" />
-
-                {/* Font Toggle button (T icon circle from screenshot) */}
+                {/* Emoji button */}
                 <button
                   type="button"
-                  onClick={() =>
-                    setFontIndex((prev) => (prev + 1) % FONT_STYLES.length)
-                  }
-                  className="w-7 h-7 rounded-full bg-white/15 hover:bg-white/25 text-white flex items-center justify-center font-bold text-xs cursor-pointer transition-all border border-white/20"
-                  title={`Font: ${FONT_STYLES[fontIndex].name} (Click to switch)`}
+                  onClick={() => setShowEmojiPicker((prev) => !prev)}
+                  className={`w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center transition-all cursor-pointer border border-white/10 shadow-lg ${
+                    showEmojiPicker
+                      ? "bg-white text-[#111b21]"
+                      : "bg-black/25 hover:bg-white/20 text-white active:scale-90"
+                  }`}
+                  title="Add emoji"
                 >
-                  <Type size={15} />
+                  <Smile size={20} />
                 </button>
+
+                {/* Floating Emoji Picker Popover */}
+                {showEmojiPicker && (
+                  <div
+                    ref={emojiPickerRef}
+                    className="absolute top-12 right-0 z-50 shadow-2xl rounded-2xl overflow-hidden border border-white/10 animate-in fade-in zoom-in-95 duration-150"
+                  >
+                    <EmojiPicker
+                      theme="dark"
+                      onEmojiClick={handleEmojiClick}
+                      lazyLoadEmojis
+                      previewConfig={{ showPreview: false }}
+                      searchDisabled={false}
+                      skinTonesDisabled
+                      width={window.innerWidth < 420 ? 290 : 340}
+                      height={380}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Middle: Centered Full-Screen Textarea */}
-            <div className="flex-1 flex items-center justify-center w-full max-w-4xl mx-auto px-4 my-auto">
+            <div className="flex-1 flex items-center justify-center w-full max-w-4xl mx-auto px-4 my-auto z-10">
               <textarea
+                ref={textareaRef}
                 value={textContent}
                 onChange={(e) => setTextContent(e.target.value)}
-                placeholder="Type a status..."
+                placeholder="Type a status"
                 rows={4}
                 maxLength={700}
-                className={`w-full bg-transparent text-white text-3xl sm:text-5xl md:text-6xl text-center placeholder-white/50 outline-none resize-none leading-relaxed transition-all ${FONT_STYLES[fontIndex].className}`}
+                className={`w-full bg-transparent text-white text-3xl sm:text-5xl md:text-6xl text-center placeholder:text-white/60 outline-none border-none resize-none leading-relaxed transition-all drop-shadow-md selection:bg-white/30 ${FONT_STYLES[fontIndex].className}`}
                 autoFocus
               />
             </div>
 
-            {/* Bottom Right Floating Send Button */}
-            <div className="w-full max-w-7xl mx-auto flex justify-end">
+            {/* Bottom Bar: WhatsApp Status privacy pill & Floating Send Button */}
+            <div className="w-full max-w-4xl mx-auto flex items-center justify-between z-10 px-2 sm:px-4">
+              {/* Left: WhatsApp audience pill */}
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-black/30 backdrop-blur-md text-white/90 text-xs sm:text-sm font-medium border border-white/10 shadow-md select-none">
+                <Lock size={13} className="text-white/80 shrink-0" />
+                <span>Status (Contacts)</span>
+              </div>
+
+              {/* Right: Floating WhatsApp Green Send Button */}
               <button
                 type="button"
                 disabled={!textContent.trim() || isSubmitting}
                 onClick={handleCreateTextStatus}
-                className="w-14 h-14 rounded-full bg-[#00a884] hover:bg-[#00c897] text-white flex items-center justify-center disabled:opacity-40 disabled:hover:scale-100 shadow-2xl cursor-pointer border-none hover:scale-105 active:scale-95 transition-all"
+                className="w-14 h-14 rounded-full bg-[#00a884] hover:bg-[#00c897] active:scale-95 text-white flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none shadow-[0_8px_24px_rgba(0,168,132,0.45)] cursor-pointer border-none transition-all"
                 title="Send status"
               >
-                <Send size={24} className="translate-x-0.5 -translate-y-0.5" />
+                <Send size={22} className="translate-x-0.5 -translate-y-0.5" />
               </button>
             </div>
           </div>,
@@ -524,30 +587,39 @@ const StatusDrawer = ({
               )}
             </div>
 
-            {/* Bottom Caption Bar */}
-            <div className="flex items-center gap-3 w-full max-w-2xl mx-auto pb-2">
-              <input
-                type="text"
-                value={mediaCaption}
-                onChange={(e) => setMediaCaption(e.target.value)}
-                placeholder="Add a caption..."
-                className="flex-1 bg-[#202c33] text-[#e9edef] placeholder-[#8696a0] text-sm sm:text-base px-5 py-3 rounded-full outline-none border border-[#2a3942] focus:border-[#00a884] shadow-lg backdrop-blur-md transition-colors"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleCreateMediaStatus();
-                  }
-                }}
-              />
-              <button
-                type="button"
-                disabled={isSubmitting}
-                onClick={handleCreateMediaStatus}
-                className="w-12 h-12 bg-[#00a884] hover:bg-[#00c897] text-white rounded-full flex items-center justify-center disabled:opacity-40 shadow-xl cursor-pointer border-none hover:scale-105 active:scale-95 transition-all shrink-0"
-                title="Send status"
-              >
-                <Send size={20} className="translate-x-0.5 -translate-y-0.5" />
-              </button>
+            {/* Bottom Caption and Audience Bar */}
+            <div className="w-full max-w-2xl mx-auto flex flex-col gap-2 pb-2">
+              <div className="flex items-center">
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/40 backdrop-blur-md text-white/90 text-xs font-medium border border-white/10 shadow-sm select-none">
+                  <Lock size={12} className="text-white/80 shrink-0" />
+                  <span>Status (Contacts)</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  value={mediaCaption}
+                  onChange={(e) => setMediaCaption(e.target.value)}
+                  placeholder="Add a caption..."
+                  className="flex-1 bg-[#202c33] text-[#e9edef] placeholder-[#8696a0] text-sm sm:text-base px-5 py-3 rounded-full outline-none border border-[#2a3942] focus:border-[#00a884] shadow-lg backdrop-blur-md transition-colors"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleCreateMediaStatus();
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={handleCreateMediaStatus}
+                  className="w-12 h-12 bg-[#00a884] hover:bg-[#00c897] text-white rounded-full flex items-center justify-center disabled:opacity-40 shadow-[0_8px_20px_rgba(0,168,132,0.4)] cursor-pointer border-none hover:scale-105 active:scale-95 transition-all shrink-0"
+                  title="Send status"
+                >
+                  <Send size={20} className="translate-x-0.5 -translate-y-0.5" />
+                </button>
+              </div>
             </div>
           </div>,
           document.body
